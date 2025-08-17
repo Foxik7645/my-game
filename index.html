@@ -16,41 +16,25 @@
   .small {font-size:12px; color:#aaa;}
   .leaflet-marker-icon, .leaflet-div-icon img {image-rendering: pixelated !important;}
   .pixel {font-family:'Press Start 2P', 'VT323', monospace;}
-
-  /* Ресурсы */
   #resources {display:flex; flex-wrap:wrap; align-items:center; gap:10px; padding:6px 8px; background:#232323; border:1px solid #3a3a3a; border-radius:10px;}
   .res {display:flex; align-items:center; gap:6px; padding:4px 8px; background:#1a1a1a; border:1px solid #3a3a3a; border-radius:8px;}
   .res b {font-variant-numeric: tabular-nums;}
-
-  /* Тосты */
   #toasts {position:fixed; right:12px; bottom:12px; display:flex; flex-direction:column; gap:8px; z-index:2500;}
-  .toast {background:#2d2d2d; border:1px solid #444; border-radius:10px; padding:10px 12px; box-shadow:0 8px 24px rgba(0,0,0,0.35); min-width:280px;}
+  .toast {background:#2d2b2d; border:1px solid #444; border-radius:10px; padding:10px 12px; box-shadow:0 8px 24px rgba(0,0,0,0.35); min-width:280px;}
   .toast .actions {margin-top:8px; display:flex; gap:8px; justify-content:flex-end;}
-
-  /* Выделение */
   .marker-selected {filter: drop-shadow(0 0 6px rgba(0,255,255,0.8));}
-
-  /* Прогресс-бар */
   .progress-wrap {background:rgba(0,0,0,0.6); border:1px solid #777; width:64px; height:8px; border-radius:10px; overflow:hidden; transform: translate(-50%,-130%);}
   .progress-bar {height:100%; width:0%; background:#66e089;}
-
-  /* Рабочие как divIcon */
   .worker {width:48px; height:48px; transform: translate(-50%, -50%);}
   .worker img {width:48px; height:48px;}
   .flip-x {transform: scaleX(-1);}
-
-  /* === РЕДАКТОР (пейнт) — предпросмотр крупный === */
   #editMenu {position:fixed; top:96px; right:10px; background:#2b2b2b; padding:12px; border-radius:12px; display:none; flex-direction:column; gap:8px; z-index:2200; width:340px; box-shadow:0 8px 24px rgba(0,0,0,0.35);}
   #editMenu h4 {margin:0 0 4px 0; font-size:14px;}
   #paintCanvas {image-rendering:pixelated; border:1px solid #555; background:#000; width:480px; height:480px; align-self:center;}
   .colorPalette {display:flex; flex-wrap:wrap; gap:4px; margin-top:4px;}
   .colorTile {width:18px; height:18px; cursor:pointer; border:1px solid #555;}
   #canvasInfo {color:#aaa; font-size:12px;}
-
-  /* === ОВЕРЛЕЙ (рынок) === */
   #overlay {position:fixed; inset:0; background:rgba(0,0,0,0.5); display:none; z-index:2100;}
-
-  /* === Рынок === */
   #marketMenu{
     position:fixed; top:50%; left:50%; transform:translate(-50%,-50%);
     background:#2b2b2b; border:1px solid #444; border-radius:12px; padding:16px; width:540px; max-width:95vw; z-index:2200;
@@ -66,8 +50,6 @@
   .tabs {display:flex; gap:8px; margin-bottom:8px;}
   .tabs button {background:#333}
   .tabs .active {background:#555}
-
-  /* === ЛЕВАЯ ПАНЕЛЬ МАГАЗИНА === */
   #shopPanel{
     position:fixed; top:88px; left:0; bottom:0; width:330px;
     background:#222; border-right:1px solid #3a3a3a; z-index:2150;
@@ -80,11 +62,10 @@
     image-rendering:pixelated; border-radius:12px; box-shadow:0 10px 18px rgba(0,0,0,.35);
     cursor:pointer; overflow:hidden;
   }
-  /* ВАЖНО: относительные пути */
-  .card.drov  {background:url('images/CardDrovosek.png') center/cover no-repeat;}
-  .card.miner {background:url('images/CardMiner.png')   center/cover no-repeat;}
-  /* Если нет отдельной карты базы, можно оставить ту же картинку: */
-  .card.base  {background:url('images/CardDrovosek.png') center/cover no-repeat;}
+  .card.drov {background:url('C:/Users/novik/OneDrive/Рабочий стол/map-game/public/images/CardDrovosek.png') center/cover no-repeat;}
+  .card.miner {background:url('C:/Users/novik/OneDrive/Рабочий стол/map-game/public/images/CardMiner.png') center/cover no-repeat;}
+  .card.base {background:url('C:/Users/novik/OneDrive/Рабочий стол/map-game/public/images/CardBase.png') center/cover no-repeat;}
+  .card.fermer {background:url('C:/Users/novik/OneDrive/Рабочий стол/map-game/public/images/Cardeda.png') center/cover no-repeat;}
   .card .title{position:absolute; top:18px; left:84px; right:16px; font-size:13px; color:var(--cream); text-shadow:0 1px 0 #000;}
   .card .cost {position:absolute; top:46px; left:84px; right:16px; font-size:12px; color:var(--cream); text-shadow:0 1px 0 #000;}
   .card .desc {position:absolute; left:30px; right:30px; bottom:22px; font-size:12px; line-height:1.25; color:var(--cream); text-shadow:0 1px 0 #000;}
@@ -97,8 +78,6 @@
   .card.active .buybar{ transform:translateY(0); }
   .buybar .price{font-size:12px; color:var(--accent)}
   .card:hover{filter:brightness(1.07);}
-
-  /* Мягкое скрытие спрайтов при дальнем зуме */
   .is-hidden {opacity:0; pointer-events:none;}
 </style>
 </head>
@@ -114,7 +93,6 @@
   </div>
 </div>
 
-<!-- === Редактор спрайта === -->
 <div id="editMenu">
   <h4>Редактор спрайта</h4>
   <canvas id="paintCanvas" width="60" height="60"></canvas>
@@ -126,10 +104,8 @@
   </div>
 </div>
 
-<!-- === Оверлей (рынок) === -->
 <div id="overlay"></div>
 
-<!-- === Рынок === -->
 <div id="marketMenu">
   <h3>Рынок</h3>
   <div class="tabs">
@@ -159,15 +135,12 @@
   </div>
 </div>
 
-<!-- === ЛЕВАЯ ПАНЕЛЬ МАГАЗИНА === -->
 <aside id="shopPanel">
   <div id="shopHeader">
     <h3 class="pixel">Магазин</h3>
     <button id="shopClose">×</button>
   </div>
-
-  <!-- Дом дровосека -->
-  <div class="card drov pixel" data-type="drovosekdom" data-cost="100" data-icon="images/DrovosekDom.png" data-name="DrovosekDom">
+  <div class="card drov pixel" data-type="drovosekdom" data-cost="100" data-icon="C:/Users/novik/OneDrive/Рабочий стол/map-game/public/images/DrovosekDom.png" data-name="DrovosekDom">
     <div class="buybar">
       <span class="price">100 💰</span>
       <button class="buyBtn">Купить</button>
@@ -176,9 +149,7 @@
     <div class="cost">Стоимость: 100</div>
     <div class="desc">Дом дровосека. Рабочие добывают дерево рядом и носят в дом.</div>
   </div>
-
-  <!-- Дом шахтёра -->
-  <div class="card miner pixel" data-type="minehouse" data-cost="100" data-icon="images/Minehouse.png" data-name="Minehouse">
+  <div class="card miner pixel" data-type="minehouse" data-cost="100" data-icon="C:/Users/novik/OneDrive/Рабочий стол/map-game/public/images/Minehouse.png" data-name="Minehouse">
     <div class="buybar">
       <span class="price">100 💰</span>
       <button class="buyBtn">Купить</button>
@@ -187,9 +158,7 @@
     <div class="cost">Стоимость: 100</div>
     <div class="desc">Дом шахтёра. Поблизости появляются камни. Шахтёры добывают и несут в дом.</div>
   </div>
-
-  <!-- База -->
-  <div class="card base pixel" data-type="base" data-cost="0" data-icon="images/Base.png" data-name="База">
+  <div class="card base pixel" data-type="base" data-cost="0" data-icon="C:/Users/novik/OneDrive/Рабочий стол/map-game/public/images/Base.png" data-name="База">
     <div class="buybar">
       <span class="price">Бесплатно</span>
       <button class="buyBtn">Поставить</button>
@@ -197,6 +166,16 @@
     <div class="title">База</div>
     <div class="cost">Стоимость: 0</div>
     <div class="desc">Главная точка. Даст цветную зону строительства с апгрейдами.</div>
+  </div>
+  <!-- Новая карточка для Cardeda -->
+  <div class="card fermer pixel" data-type="fermerdom" data-cost="100" data-icon="C:/Users/novik/OneDrive/Рабочий стол/map-game/public/images/FermerDom.png" data-name="FermerDom">
+    <div class="buybar">
+      <span class="price">100 💰</span>
+      <button class="buyBtn">Купить</button>
+    </div>
+    <div class="title">FermerDom</div>
+    <div class="cost">Стоимость: 100</div>
+    <div class="desc">Дом фермера. Рабочие добывают кукурузу рядом и носят в дом.</div>
   </div>
 </aside>
 
@@ -216,13 +195,14 @@ function getPlayerId(){
 }
 const playerId=getPlayerId();
 
-const resources = { money: 100, wood: 10, stone: 0 };
+const resources = { money: 100, wood: 10, stone: 0, corn: 0 };
 function updateResourcePanel(){
   const el = document.getElementById('resources');
   el.innerHTML = `
     <div class="res">💰 Деньги <b id="r-money">${resources.money}</b></div>
     <div class="res">🪵 Дерево <b id="r-wood">${resources.wood}</b></div>
     <div class="res">🪨 Камень <b id="r-stone">${resources.stone}</b></div>
+    <div class="res">🌽 Кукуруза <b id="r-corn">${resources.corn}</b></div>
   `;
 }
 updateResourcePanel();
@@ -239,7 +219,7 @@ L.tileLayer(
 /* ===============================
    ВИДИМОСТЬ СПРАЙТОВ ПО ЗУМУ
 ================================ */
-const SPRITES_Z_MIN = 11;  // показываем при z >= 11
+const SPRITES_Z_MIN = 11;
 function isSpriteZoomVisible(z){ return z >= SPRITES_Z_MIN; }
 function setMarkerHidden(m, hidden){
   const el = m?.getElement?.();
@@ -252,8 +232,10 @@ function applyVisibilityToAll(){
   markers.forEach(m => setMarkerHidden(m, hidden));
   trees.forEach(t => setMarkerHidden(t.marker, hidden));
   rocks.forEach(r => setMarkerHidden(r.marker, hidden));
+  corn.forEach(c => setMarkerHidden(c.marker, hidden));
   woodcuttersByHome.forEach(set => set.forEach(wm => { setMarkerHidden(wm, hidden); const ui=wm.worker.harvest.ui; if(ui?.marker)setMarkerHidden(ui.marker,hidden);} ));
   minersByHome.forEach(set => set.forEach(wm => { setMarkerHidden(wm, hidden); const ui=wm.worker.harvest.ui; if(ui?.marker)setMarkerHidden(ui.marker,hidden);} ));
+  farmersByHome.forEach(set => set.forEach(wm => { setMarkerHidden(wm, hidden); const ui=wm.worker.harvest.ui; if(ui?.marker)setMarkerHidden(ui.marker,hidden);} ));
   if(ghostMarker) setMarkerHidden(ghostMarker, hidden);
 }
 map.on('zoomend', applyVisibilityToAll);
@@ -261,12 +243,12 @@ map.on('zoomend', applyVisibilityToAll);
 /* ===============================
    ЗДАНИЯ / БАЗА / ЗОНА
 ================================ */
-const markers=new Map();          // id -> L.marker
-const buildingData=new Map();     // id -> {type, owner, name}
+const markers=new Map();
+const buildingData=new Map();
 const selectedMarkers=new Set();
 
 let baseMarker=null;
-let baseZone=null;  // L.circle
+let baseZone=null;
 let baseMeta={ level:0, color:'#00ffcc', paintSize:32 };
 
 const BASE_LEVELS = {
@@ -275,9 +257,34 @@ const BASE_LEVELS = {
   3: { radius: 300, icon: 176, cost: 500,  paint: 128 },
   4: { radius: 380, icon: 208, cost: 1000, paint: 256 },
 };
+
+const DROVOSEKDOM_LEVELS = {
+  1: { icon: 96, cost: 150, workers: 3, paint: 60 },
+  2: { icon: 112, cost: 350, workers: 5, paint: 72 },
+  3: { icon: 128, cost: 650, workers: 9, paint: 84 },
+  4: { icon: 144, cost: 1050, workers: 15, paint: 96 },
+};
+
+const FERMERVOM_LEVELS = {
+  1: { icon: 96, cost: 150, workers: 3, paint: 60 },
+  2: { icon: 112, cost: 350, workers: 5, paint: 72 },
+  3: { icon: 128, cost: 650, workers: 9, paint: 84 },
+  4: { icon: 144, cost: 1050, workers: 15, paint: 96 },
+};
+
 function nextBaseCost(){
   if(baseMeta.level>=4) return null;
   return BASE_LEVELS[baseMeta.level+1].cost;
+}
+function nextDrovosekDomCost(id){
+  const b = buildingData.get(id);
+  if(!b || b.type !== 'drovosekdom' || b.level >= 4) return null;
+  return DROVOSEKDOM_LEVELS[b.level + 1].cost;
+}
+function nextFermerDomCost(id){
+  const b = buildingData.get(id);
+  if(!b || b.type !== 'fermerdom' || b.level >= 4) return null;
+  return FERMERVOM_LEVELS[b.level + 1].cost;
 }
 function applyBaseZone(){
   if(!baseMarker) return;
@@ -298,65 +305,112 @@ function updateBaseIcon(){
   if(!baseMarker) return;
   const lvl = BASE_LEVELS[baseMeta.level];
   const icon=L.icon({
-    iconUrl: 'images/Base.png',
+    iconUrl: 'C:/Users/novik/OneDrive/Рабочий стол/map-game/public/images/Base.png',
     iconSize:[lvl.icon,lvl.icon],
     iconAnchor:[lvl.icon/2,lvl.icon/2]
   });
   baseMarker.setIcon(icon);
-  baseMarker.currentIcon='images/Base.png';
+  baseMarker.currentIcon='C:/Users/novik/OneDrive/Рабочий стол/map-game/public/images/Base.png';
   const b = buildingData.get(baseMarker.options.buildingId);
   if(b) baseMarker.bindPopup(makePopupHtml(b));
+}
+function updateDrovosekDomIcon(id){
+  const marker = markers.get(id);
+  if(!marker) return;
+  const b = buildingData.get(id);
+  if(!b || b.type !== 'drovosekdom') return;
+  const lvl = DROVOSEKDOM_LEVELS[b.level];
+  const icon = L.icon({
+    iconUrl: marker.currentIcon || 'C:/Users/novik/OneDrive/Рабочий стол/map-game/public/images/DrovosekDom.png',
+    iconSize: [lvl.icon, lvl.icon],
+    iconAnchor: [lvl.icon/2, lvl.icon/2]
+  });
+  marker.setIcon(icon);
+  marker.bindPopup(makePopupHtml(b));
+}
+function updateFermerDomIcon(id){
+  const marker = markers.get(id);
+  if(!marker) return;
+  const b = buildingData.get(id);
+  if(!b || b.type !== 'fermerdom') return;
+  const lvl = FERMERVOM_LEVELS[b.level];
+  const icon = L.icon({
+    iconUrl: marker.currentIcon || 'C:/Users/novik/OneDrive/Рабочий стол/map-game/public/images/FermerDom.png',
+    iconSize: [lvl.icon, lvl.icon],
+    iconAnchor: [lvl.icon/2, lvl.icon/2]
+  });
+  marker.setIcon(icon);
+  marker.bindPopup(makePopupHtml(b));
 }
 function randomBrightColor(){
   const h = Math.floor(Math.random()*360);
   return `hsl(${h} 95% 60%)`;
 }
 function pointInsideBase(latlng){
-  if(!baseMarker || !baseMeta.level) return true; // для самой базы
+  if(!baseMarker || !baseMeta.level) return true;
   const center = baseMarker.getLatLng();
   const dist = map.distance(center, latlng);
   return dist <= BASE_LEVELS[baseMeta.level].radius - 2;
 }
 
-/* дома -> набор рабочих */
-const woodcuttersByHome = new Map(); // homeId -> Set(marker)
-const minersByHome = new Map();      // homeId -> Set(marker)
+const woodcuttersByHome = new Map();
+const minersByHome = new Map();
+const farmersByHome = new Map();
 
 function generateId(){return Math.random().toString(36).slice(2)+Date.now().toString(36);}
 
-function iconSpecForType(type){
+function iconSpecForType(type, level=1){
   if(type==='base'){
     const lvl = BASE_LEVELS[baseMeta.level||1] || BASE_LEVELS[1];
     return {size:[lvl.icon,lvl.icon], anchor:[lvl.icon/2,lvl.icon/2]};
   }
-  if(type==='drovosekdom' || type==='minehouse') return {size:[96,96], anchor:[48,48]};
+  if(type==='drovosekdom'){
+    const lvl = DROVOSEKDOM_LEVELS[level] || DROVOSEKDOM_LEVELS[1];
+    return {size:[lvl.icon,lvl.icon], anchor:[lvl.icon/2,lvl.icon/2]};
+  }
+  if(type==='minehouse') return {size:[96,96], anchor:[48,48]};
+  if(type==='fermerdom'){
+    const lvl = FERMERVOM_LEVELS[level] || FERMERVOM_LEVELS[1];
+    return {size:[lvl.icon,lvl.icon], anchor:[lvl.icon/2,lvl.icon/2]};
+  }
   return {size:[64,64], anchor:[32,32]};
 }
 function iconUrlForType(type, fallback){
-  if(type==='base') return 'images/Base.png';
-  if(type==='drovosekdom') return 'images/DrovosekDom.png';
-  if(type==='minehouse')   return 'images/Minehouse.png';
-  return fallback || 'images/House.png';
+  if(type==='base') return 'C:/Users/novik/OneDrive/Рабочий стол/map-game/public/images/Base.png';
+  if(type==='drovosekdom') return 'C:/Users/novik/OneDrive/Рабочий стол/map-game/public/images/DrovosekDom.png';
+  if(type==='minehouse')   return 'C:/Users/novik/OneDrive/Рабочий стол/map-game/public/images/Minehouse.png';
+  if(type==='fermerdom')   return 'C:/Users/novik/OneDrive/Рабочий стол/map-game/public/images/FermerDom.png';
+  return fallback || 'C:/Users/novik/OneDrive/Рабочий стол/map-game/public/images/House.png';
 }
 function makePopupHtml(b){
   const owner = b.owner ? b.owner.slice(0,8) : '';
   const name = b.name || b.type;
+  const level = b.level || 1;
   const canEdit = (b.owner===playerId);
 
   const editBtn = canEdit ? `<button onclick="editBuilding('${b.id}')">Редактировать</button>` : '';
   const delBtn  = canEdit ? `<button onclick="deleteBuilding('${b.id}')">Удалить</button>` : '';
   const hireWood = (canEdit && b.type==='drovosekdom') ? `<button onclick="hireWoodcutter('${b.id}')">Нанять дровосека</button>` : '';
   const hireMiner= (canEdit && b.type==='minehouse')   ? `<button onclick="hireMiner('${b.id}')">Нанять шахтёра</button>` : '';
+  const hireFermer = (canEdit && b.type==='fermerdom') ? `<button onclick="hireFermer('${b.id}')">Нанять фермера</button>` : '';
   const upgradeBase = (canEdit && b.type==='base')
       ? (()=>{ const cost = nextBaseCost(); return (cost!==null) ? `<button onclick="upgradeBase()">Улучшить базу (${cost}💰)</button>` : `<span class="small">Макс. уровень</span>`; })()
       : '';
+  const upgradeDrovosekDom = (canEdit && b.type==='drovosekdom')
+      ? (()=>{ const cost = nextDrovosekDomCost(b.id); return (cost!==null) ? `<button onclick="upgradeDrovosekDom('${b.id}')">Улучшить дом (${cost}💰)</button>` : `<span class="small">Макс. уровень</span>`; })()
+      : '';
+  const upgradeFermerDom = (canEdit && b.type==='fermerdom')
+      ? (()=>{ const cost = nextFermerDomCost(b.id); return (cost!==null) ? `<button onclick="upgradeFermerDom('${b.id}')">Улучшить дом (${cost}💰)</button>` : `<span class="small">Макс. уровень</span>`; })()
+      : '';
 
-  return `🏠 <b>${name}</b><br/>Тип: ${b.type}${owner?('<br/>Владелец: '+owner):''}<br/>${editBtn} ${delBtn} ${hireWood} ${hireMiner} ${upgradeBase}`;
+  return `🏠 <b>${name}</b><br/>Тип: ${b.type}<br/>Уровень: ${level}${owner?('<br/>Владелец: '+owner):''}<br/>${editBtn} ${delBtn} ${hireWood} ${hireMiner} ${hireFermer} ${upgradeBase} ${upgradeDrovosekDom} ${upgradeFermerDom}`;
 }
 
 function addBuildingToMap(b){
   if(!b.id) b.id=generateId();
   if(markers.has(b.id)) return;
+
+  if(!b.level) b.level = 1;
 
   const spec = iconSpecForType(b.type);
   const iconUrl = iconUrlForType(b.type, b.iconUrl);
@@ -389,6 +443,7 @@ function addBuildingToMap(b){
 
   if(b.type==='drovosekdom' && b.owner===playerId && !woodcuttersByHome.has(b.id)) woodcuttersByHome.set(b.id, new Set());
   if(b.type==='minehouse'   && b.owner===playerId && !minersByHome.has(b.id))     minersByHome.set(b.id, new Set());
+  if(b.type==='fermerdom' && b.owner===playerId && !farmersByHome.has(b.id)) farmersByHome.set(b.id, new Set());
 }
 
 window.deleteBuilding = function(id){
@@ -404,6 +459,7 @@ window.deleteBuilding = function(id){
   }
   if(b.type==='drovosekdom'){ const set = woodcuttersByHome.get(id); if(set){ set.forEach(w=> map.removeLayer(w)); } woodcuttersByHome.delete(id); }
   if(b.type==='minehouse'){ const set = minersByHome.get(id); if(set){ set.forEach(w=> map.removeLayer(w)); } minersByHome.delete(id); }
+  if(b.type==='fermerdom'){ const set = farmersByHome.get(id); if(set){ set.forEach(w=> map.removeLayer(w)); } farmersByHome.delete(id); }
 
   map.removeLayer(marker);
   markers.delete(id);
@@ -424,6 +480,36 @@ window.upgradeBase = function(){
   const b = buildingData.get(baseMarker.options.buildingId);
   if(b) baseMarker.bindPopup(makePopupHtml(b));
   showToast(`База улучшена до ур.${baseMeta.level}!`, [], 1800);
+};
+
+window.upgradeDrovosekDom = function(id){
+  const marker = markers.get(id);
+  if(!marker) return;
+  const b = buildingData.get(id);
+  if(!b || b.type !== 'drovosekdom' || b.owner !== playerId) return;
+  if(b.level >= 4){ alert('Максимальный уровень дома дровосека.'); return; }
+  const cost = nextDrovosekDomCost(id);
+  if(resources.money < cost){ showToast('Недостаточно денег для апгрейда дома дровосека.',[],1600); return; }
+
+  resources.money -= cost; updateResourcePanel();
+  b.level += 1;
+  updateDrovosekDomIcon(id);
+  showToast(`Дом дровосека улучшен до ур.${b.level}!`, [], 1800);
+};
+
+window.upgradeFermerDom = function(id){
+  const marker = markers.get(id);
+  if(!marker) return;
+  const b = buildingData.get(id);
+  if(!b || b.type !== 'fermerdom' || b.owner !== playerId) return;
+  if(b.level >= 4){ alert('Максимальный уровень дома фермера.'); return; }
+  const cost = nextFermerDomCost(id);
+  if(resources.money < cost){ showToast('Недостаточно денег для апгрейда дома фермера.',[],1600); return; }
+
+  resources.money -= cost; updateResourcePanel();
+  b.level += 1;
+  updateFermerDomIcon(id);
+  showToast(`Дом фермера улучшен до ур.${b.level}!`, [], 1800);
 };
 
 /* ===============================
@@ -464,6 +550,8 @@ window.editBuilding = function(id){
   editingMarker=marker; editMenu.style.display='flex';
   const b = buildingData.get(id);
   if(b?.type==='base'){ setCanvasLogicalSize(BASE_LEVELS[baseMeta.level].paint); }
+  else if(b?.type==='drovosekdom'){ setCanvasLogicalSize(DROVOSEKDOM_LEVELS[b.level].paint); }
+  else if(b?.type==='fermerdom'){ setCanvasLogicalSize(FERMERVOM_LEVELS[b.level].paint); }
   else { setCanvasLogicalSize(60); }
 
   const img=new Image(); img.crossOrigin='anonymous'; img.src=marker.currentIcon;
@@ -474,7 +562,7 @@ document.getElementById('saveSprite').onclick=()=>{
   const id = editingMarker.options.buildingId;
   const b = buildingData.get(id);
   const dataUrl=canvas.toDataURL();
-  const spec = iconSpecForType(b?.type||'');
+  const spec = iconSpecForType(b?.type||'', b?.level||1);
   const icon=new L.Icon({iconUrl:dataUrl, iconSize:spec.size, iconAnchor:spec.anchor});
   editingMarker.setIcon(icon);
   editingMarker.currentIcon=dataUrl;
@@ -484,23 +572,31 @@ document.getElementById('saveSprite').onclick=()=>{
 closeEditorBtn.onclick=()=>{ editMenu.style.display='none'; editingMarker=null; };
 
 /* ===============================
-   РЕСУРСНЫЕ ОБЪЕКТЫ (деревья/камни)
+   РЕСУРСНЫЕ ОБЪЕКТЫ (деревья/камни/кукуруза)
 ================================ */
 const TREE_ICONS = [
-  new L.Icon({iconUrl:'images/Tree1.png', iconSize:[48,48], iconAnchor:[24,36]}),
-  new L.Icon({iconUrl:'images/Tree2.png', iconSize:[48,48], iconAnchor:[24,36]}),
-  new L.Icon({iconUrl:'images/Tree3.png', iconSize:[48,48], iconAnchor:[24,36]}),
+  new L.Icon({iconUrl:'C:/Users/novik/OneDrive/Рабочий стол/map-game/public/images/Tree1.png', iconSize:[48,48], iconAnchor:[24,36]}),
+  new L.Icon({iconUrl:'C:/Users/novik/OneDrive/Рабочий стол/map-game/public/images/Tree2.png', iconSize:[48,48], iconAnchor:[24,36]}),
+  new L.Icon({iconUrl:'C:/Users/novik/OneDrive/Рабочий стол/map-game/public/images/Tree3.png', iconSize:[48,48], iconAnchor:[24,36]}),
 ];
 const trees = new Map();
 const TREE_CAP = 50, TREE_SPAWN_INTERVAL_MS = 60_000, TREE_RADIUS_MAX_M = 100, TREE_RADIUS_MIN_M = 20;
 
 const ROCK_ICONS = [
-  new L.Icon({iconUrl:'images/Kamen.png',  iconSize:[48,48], iconAnchor:[24,36]}),
-  new L.Icon({iconUrl:'images/Kamen2.png', iconSize:[48,48], iconAnchor:[24,36]}),
-  new L.Icon({iconUrl:'images/Kamen3.png', iconSize:[48,48], iconAnchor:[24,36]}),
+  new L.Icon({iconUrl:'C:/Users/novik/OneDrive/Рабочий стол/map-game/public/images/Kamen.png',  iconSize:[48,48], iconAnchor:[24,36]}),
+  new L.Icon({iconUrl:'C:/Users/novik/OneDrive/Рабочий стол/map-game/public/images/Kamen2.png', iconSize:[48,48], iconAnchor:[24,36]}),
+  new L.Icon({iconUrl:'C:/Users/novik/OneDrive/Рабочий стол/map-game/public/images/Kamen3.png', iconSize:[48,48], iconAnchor:[24,36]}),
 ];
 const rocks = new Map();
 const ROCK_CAP = 50, ROCK_SPAWN_INTERVAL_MS = 60_000, ROCK_RADIUS_MAX_M = 100, ROCK_RADIUS_MIN_M = 20;
+
+const CORN_ICONS = [
+  new L.Icon({iconUrl:'C:/Users/novik/OneDrive/Рабочий стол/map-game/public/images/Corn.png',  iconSize:[48,48], iconAnchor:[24,36]}),
+  new L.Icon({iconUrl:'C:/Users/novik/OneDrive/Рабочий стол/map-game/public/images/Corn2.png', iconSize:[48,48], iconAnchor:[24,36]}),
+  new L.Icon({iconUrl:'C:/Users/novik/OneDrive/Рабочий стол/map-game/public/images/Corn3.png', iconSize:[48,48], iconAnchor:[24,36]}),
+];
+const corn = new Map();
+const CORN_CAP = 50, CORN_SPAWN_INTERVAL_MS = 60_000, CORN_RADIUS_MAX_M = 100, CORN_RADIUS_MIN_M = 20;
 
 function metersToLat(deltaM){ return deltaM/111000; }
 function randBetween(a,b){ return a + Math.random()*(b-a); }
@@ -543,12 +639,27 @@ function spawnRocksBatch(){
     rocks.set(id, {id, marker:m, lat:pt.lat, lng:pt.lng});
   }
 }
+function spawnCornBatch(){
+  const anchors = getDomAnchors('fermerdom');
+  if(anchors.length===0) return;
+  const need = Math.max(0, CORN_CAP - corn.size); if(need===0) return;
+  const toSpawn = Math.min(6, need);
+  for(let i=0;i<toSpawn;i++){
+    const anchor = anchors[Math.floor(Math.random()*anchors.length)];
+    const pt = pickPointNear(anchor, CORN_RADIUS_MAX_M, CORN_RADIUS_MIN_M);
+    const id = generateId();
+    const m = L.marker([pt.lat, pt.lng], {icon: CORN_ICONS[Math.floor(Math.random()*CORN_ICONS.length)]}).addTo(map);
+    applyVisibilityOnMarker(m);
+    corn.set(id, {id, marker:m, lat:pt.lat, lng:pt.lng});
+  }
+}
 
 /* ===============================
-   РАБОЧИЕ (дровосеки / шахтёры)
+   РАБОЧИЕ (дровосеки / шахтёры / фермеры)
 ================================ */
-const WC_FRAMES = ['images/Drovosek1.png','images/Drovosek2.png','images/Drovosek3.png','images/Drovosek4.png'];
-const MINER_FRAMES = ['images/Miner1.png','images/Miner2.png','images/Miner3.png','images/Miner4.png'];
+const WC_FRAMES = ['C:/Users/novik/OneDrive/Рабочий стол/map-game/public/images/Drovosek1.png','C:/Users/novik/OneDrive/Рабочий стол/map-game/public/images/Drovosek2.png','C:/Users/novik/OneDrive/Рабочий стол/map-game/public/images/Drovosek3.png','C:/Users/novik/OneDrive/Рабочий стол/map-game/public/images/Drovosek4.png'];
+const MINER_FRAMES = ['C:/Users/novik/OneDrive/Рабочий стол/map-game/public/images/Miner1.png','C:/Users/novik/OneDrive/Рабочий стол/map-game/public/images/Miner2.png','C:/Users/novik/OneDrive/Рабочий стол/map-game/public/images/Miner3.png','C:/Users/novik/OneDrive/Рабочий стол/map-game/public/images/Miner4.png'];
+const FERM_FRAMES = ['C:/Users/novik/OneDrive/Рабочий стол/map-game/public/images/ferma1.png','C:/Users/novik/OneDrive/Рабочий стол/map-game/public/images/ferma2.png','C:/Users/novik/OneDrive/Рабочий стол/map-game/public/images/ferma3.png','C:/Users/novik/OneDrive/Рабочий стол/map-game/public/images/ferma4.png'];
 const IDLE_INDEX = 1, FRAME_INTERVAL_MS = 160;
 const STEP_SPEED = 0.0009, ARRIVE_EPS = 0.00008;
 
@@ -587,14 +698,17 @@ function createWorker(homeId, type){
   const lat=homePos.lat + metersToLat(startR)*Math.sin(startAng);
   const lng=homePos.lng + metersToLat(startR)*Math.cos(startAng);
 
-  const frames = (type==='wood') ? WC_FRAMES : MINER_FRAMES;
+  let frames;
+  if(type==='wood') frames = WC_FRAMES;
+  else if(type==='miner') frames = MINER_FRAMES;
+  else if(type==='fermer') frames = FERM_FRAMES;
 
   const m=L.marker([lat,lng],{icon: makeWorkerDiv(frames[IDLE_INDEX], false)}).addTo(map);
   applyVisibilityOnMarker(m);
   m.worker = {
     id: generateId(),
-    type, // wood | miner
-    state:'wander',           // wander | toTarget | harvest | return
+    type, // wood | miner | fermer
+    state:'wander',
     target: pickWanderPointAround(homePos),
     speed: STEP_SPEED,
     selected:false,
@@ -617,6 +731,8 @@ window.hireWoodcutter = function(homeId){
   const b = buildingData.get(homeId);
   if(!b || b.owner!==playerId || b.type!=='drovosekdom') return;
   const set = woodcuttersByHome.get(homeId) || new Set();
+  const maxWorkers = DROVOSEKDOM_LEVELS[b.level].workers;
+  if(set.size >= maxWorkers){ showToast(`Достигнут лимит дровосеков (${maxWorkers}) для уровня ${b.level}.`, [], 1500); return; }
   const w = createWorker(homeId,'wood'); if(w){ set.add(w); woodcuttersByHome.set(homeId,set); }
   showToast('👷 Дровосек нанят!', [], 1500);
 };
@@ -626,6 +742,15 @@ window.hireMiner = function(homeId){
   const set = minersByHome.get(homeId) || new Set();
   const w = createWorker(homeId,'miner'); if(w){ set.add(w); minersByHome.set(homeId,set); }
   showToast('⛏️ Шахтёр нанят!', [], 1500);
+};
+window.hireFermer = function(homeId){
+  const b = buildingData.get(homeId);
+  if(!b || b.owner!==playerId || b.type!=='fermerdom') return;
+  const set = farmersByHome.get(homeId) || new Set();
+  const maxWorkers = FERMERVOM_LEVELS[b.level].workers;
+  if(set.size >= maxWorkers){ showToast(`Достигнут лимит фермеров (${maxWorkers}) для уровня ${b.level}.`, [], 1500); return; }
+  const w = createWorker(homeId,'fermer'); if(w){ set.add(w); farmersByHome.set(homeId,set); }
+  showToast('🚜 Фермер нанят!', [], 1500);
 };
 function startHarvest(workerMarker, targetMap){
   const w = workerMarker.worker;
@@ -655,8 +780,11 @@ function updateHarvestUI(workerMarker){
   w.harvest.ui.bar.style.width = (p*100).toFixed(0)+'%';
   w.harvest.ui.marker.setLatLng(workerMarker.getLatLng());
   if(p>=1){
-    if(w.type==='wood') completeHarvest(workerMarker, trees, 2,5);
-    else completeHarvest(workerMarker, rocks, 2,4);
+    let targetMap;
+    if(w.type==='wood') targetMap = trees;
+    else if(w.type==='miner') targetMap = rocks;
+    else if(w.type==='fermer') targetMap = corn;
+    completeHarvest(workerMarker, targetMap, 2,5);
   }
 }
 function deliverResources(workerMarker){
@@ -664,7 +792,8 @@ function deliverResources(workerMarker){
   const homeMarker = markers.get(w.homeId); if(!homeMarker) return;
   if(w.cargo>0){
     if(w.type==='wood'){ resources.wood += w.cargo; showToast(`🪵 Доставлено: ${w.cargo}`,[],1500); }
-    else { resources.stone += w.cargo; showToast(`🪨 Доставлено: ${w.cargo}`,[],1500); }
+    else if(w.type==='miner'){ resources.stone += w.cargo; showToast(`🪨 Доставлено: ${w.cargo}`,[],1500); }
+    else if(w.type==='fermer'){ resources.corn += w.cargo; showToast(`🌽 Доставлено: ${w.cargo}`,[],1500); }
     w.cargo = 0; updateResourcePanel();
   }
 }
@@ -673,7 +802,7 @@ function moveWorkers(){
   const now = performance.now();
   const dt = now - __lastTs; __lastTs = now;
 
-  function updateSet(set, homeId){
+  function updateSet(set, homeId, type){
     const homeMarker = markers.get(homeId); if(!homeMarker) return;
     const homePos = homeMarker.getLatLng();
 
@@ -682,14 +811,20 @@ function moveWorkers(){
       const pos=marker.getLatLng();
 
       if(w.state==='wander'){
-        const pool = (w.type==='wood') ? trees : rocks;
+        let pool;
+        if(type==='wood') pool = trees;
+        else if(type==='miner') pool = rocks;
+        else if(type==='fermer') pool = corn;
         if(pool.size>0){
           const nt = nearestTarget(pos, pool);
           if(nt){ w.state='toTarget'; w.target={lat:nt.lat,lng:nt.lng}; w.harvest.targetId=nt.id; }
         }
       }
       if(w.state==='toTarget'){
-        const pool = (w.type==='wood') ? trees : rocks;
+        let pool;
+        if(type==='wood') pool = trees;
+        else if(type==='miner') pool = rocks;
+        else if(type==='fermer') pool = corn;
         if(!pool.has(w.harvest.targetId)){
           w.state='wander'; w.target = pickWanderPointAround(homePos);
         }
@@ -715,12 +850,18 @@ function moveWorkers(){
 
         if(Math.abs(dLat)+Math.abs(dLng) < ARRIVE_EPS){
           if(w.state==='wander'){
-            const pool = (w.type==='wood') ? trees : rocks;
+            let pool;
+            if(type==='wood') pool = trees;
+            else if(type==='miner') pool = rocks;
+            else if(type==='fermer') pool = corn;
             const nt = nearestTarget(pos, pool);
             if(nt){ w.state='toTarget'; w.target={lat:nt.lat,lng:nt.lng}; w.harvest.targetId=nt.id; }
             else { w.state='return'; }
           } else if(w.state==='toTarget'){
-            const pool = (w.type==='wood') ? trees : rocks;
+            let pool;
+            if(type==='wood') pool = trees;
+            else if(type==='miner') pool = rocks;
+            else if(type==='fermer') pool = corn;
             const tgt = pool.get(w.harvest.targetId);
             if(tgt){ marker.setLatLng([tgt.lat, tgt.lng]); startHarvest(marker, pool); }
             else { w.state='wander'; w.target = pickWanderPointAround(homePos); }
@@ -748,8 +889,9 @@ function moveWorkers(){
     }
   }
 
-  woodcuttersByHome.forEach((set, homeId)=>updateSet(set, homeId));
-  minersByHome.forEach((set, homeId)=>updateSet(set, homeId));
+  woodcuttersByHome.forEach((set, homeId)=>updateSet(set, homeId, 'wood'));
+  minersByHome.forEach((set, homeId)=>updateSet(set, homeId, 'miner'));
+  farmersByHome.forEach((set, homeId)=>updateSet(set, homeId, 'fermer'));
 
   requestAnimationFrame(moveWorkers);
 }
@@ -870,10 +1012,11 @@ map.on('click', e=>{
 /* ===============================
    ИНИЦИАЛИЗАЦИЯ
 ================================ */
-spawnTreesBatch(); spawnRocksBatch();
+spawnTreesBatch(); spawnRocksBatch(); spawnCornBatch();
 requestAnimationFrame(moveWorkers);
 setInterval(spawnTreesBatch, TREE_SPAWN_INTERVAL_MS);
 setInterval(spawnRocksBatch, ROCK_SPAWN_INTERVAL_MS);
+setInterval(spawnCornBatch, CORN_SPAWN_INTERVAL_MS);
 applyVisibilityToAll();
 
 /* Горячие клавиши */
