@@ -37,7 +37,7 @@
   .toast {background:#2d2b2d; border:1px solid #444; border-radius:10px; padding:10px 12px; box-shadow:0 8px 24px rgba(0,0,0,.35); min-width:280px;}
   .toast .actions {margin-top:8px; display:flex; gap:8px; justify-content:flex-end;}
 
-  /* выделение / прогресс над рабочим */
+  /* выделение / прогресс */
   .marker-selected {filter: drop-shadow(0 0 6px rgba(0,255,255,.8));}
   .progress-wrap {background:rgba(0,0,0,.6); border:1px solid #777; width:64px; height:8px; border-radius:10px; overflow:hidden; transform: translate(-50%,-130%);}
   .progress-bar {height:100%; width:0%; background:var(--bar);}
@@ -119,8 +119,8 @@
 </div>
 
 <!-- рынок -->
-<div id="overlay"></div>
-<div id="marketMenu">
+<div id="overlay" style="display:none"></div>
+<div id="marketMenu" style="display:none">
   <h3>Рынок</h3>
   <div class="tabs">
     <button id="tabWood"  class="active">🪵 Дерево</button>
@@ -189,7 +189,7 @@
 <div id="map"></div>
 <div id="toasts"></div>
 
-<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js" defer></script>
 
 <!-- === FIREBASE + GAME LOGIC === -->
 <script type="module">
@@ -219,13 +219,10 @@ const logoutBtn = document.getElementById('logoutBtn');
 const userName  = document.getElementById('userName');
 
 loginBtn.onclick = async () => {
-  try {
-    await signInWithPopup(auth, new GoogleAuthProvider());
-  } catch (e) {
-    showToast('Ошибка входа: ' + e.message, [], 2500);
-  }
+  try { await signInWithPopup(auth, new GoogleAuthProvider()); }
+  catch (e) { showToast('Ошибка входа: ' + (e?.message||e), [], 2500); }
 };
-logoutBtn.onclick = async () => { await signOut(auth); };
+logoutBtn.onclick = async () => { try{ await signOut(auth); }catch(e){} };
 
 let uid = null;          // текущий игрок
 let playerDocRef = null; // ссылка на players/{uid}
@@ -233,7 +230,6 @@ let playerDocRef = null; // ссылка на players/{uid}
 /* ---------- Игровые состояния (локально) ---------- */
 const XP_PER_LEVEL = 500;
 let level = 1, xp = 0;
-
 const resources = { money: 100, wood: 10, stone: 0, corn: 0 };
 
 /* ---------- helpers UI ---------- */
@@ -248,14 +244,15 @@ updateResourcePanel();
 
 function addXP(amount){
   xp += amount;
-  while(xp >= XP_PER_LEVEL){ xp -= XP_PER_LEVEL; level++; showToast(\`📈 Уровень \${level}!\`,[],1500); }
-  document.querySelector('#xpText').textContent = \`Lv \${level} • \${xp}/\${XP_PER_LEVEL}\`;
+  while(xp >= XP_PER_LEVEL){ xp -= XP_PER_LEVEL; level++; showToast(`📈 Уровень ${level}!`,[],1500); }
+  document.querySelector('#xpText').textContent = `Lv ${level} • ${xp}/${XP_PER_LEVEL}`;
   const p = Math.max(0, Math.min(1, xp/XP_PER_LEVEL))*100;
   document.querySelector('#xpBar .fill').style.width = p + '%';
 }
 addXP(0);
 
 /* ---------- карта ---------- */
+await new Promise(r => { if (window.L) r(); else window.addEventListener('load', r, {once:true}); });
 const map = L.map('map').setView([55.751244,37.618423], 5);
 L.tileLayer('https://cartodb-basemaps-a.global.ssl.fastly.net/dark_nolabels/{z}/{x}/{y}{r}.png',
   { attribution: '©OpenStreetMap ©Carto', subdomains: 'abcd', maxZoom: 19 }).addTo(map);
@@ -271,14 +268,21 @@ function setMarkerHidden(m, hidden){
   if(el){ el.classList.toggle('is-hidden', hidden); }
   if(hidden && m?.isPopupOpen && m.isPopupOpen()) m.closePopup();
 }
+map.on('zoomend', ()=>{
+  const hidden = !isSpriteZoomVisible(map.getZoom());
+  [...markers.values()].forEach(m=>setMarkerHidden(m, hidden));
+  trees.forEach(t=>setMarkerHidden(t.marker, hidden));
+  rocks.forEach(r=>setMarkerHidden(r.marker, hidden));
+  corn.forEach(c=>setMarkerHidden(c.marker, hidden));
+  if(ghostMarker) setMarkerHidden(ghostMarker, hidden);
+});
 
-/* ---------- здания/объекты (локальные карты) ---------- */
+/* ---------- здания/объекты ---------- */
 const markers=new Map();          // id -> L.marker
 const buildingData=new Map();     // id -> {type, owner, name, level}
 const selectedMarkers=new Set();
 
-let baseMarker=null;
-let baseZone=null;  // L.polygon
+let baseMarker=null, baseZone=null;
 let baseMeta={ level:0, color:'#00ffcc', paintSize:32, poly:{angles:[], radii:[]} };
 
 const BASE_LEVELS = {
@@ -355,6 +359,19 @@ function iconUrlForType(type){
   if(type==='fermerdom')   return './images/FermerDom.png';
   return './images/House.png';
 }
+function nextBaseCost(){ return (baseMeta.level>=4)?null:BASE_LEVELS[baseMeta.level+1].cost; }
+function nextCostFor(b){
+  if(b.type==='drovosekdom') return (b.level>=4)?null:DROVOSEKDOM_LEVELS[b.level+1].cost;
+  if(b.type==='minehouse')   return (b.level>=4)?null:MINEHOUSE_LEVELS[b.level+1].cost;
+  if(b.type==='fermerdom')   return (b.level>=4)?null:FERMERVOM_LEVELS[b.level+1].cost;
+  return null;
+}
+
+/* наборы работников у своих домов */
+const woodcuttersByHome = new Map();
+const minersByHome = new Map();
+const farmersByHome = new Map();
+
 function makePopupHtml(b){
   const owner = b.owner ? (b.owner===uid?'(вы)':b.owner.slice(0,6)) : '';
   const name = b.name || b.type;
@@ -389,20 +406,8 @@ function makePopupHtml(b){
 
   return `🏠 <b>${name}</b><br/>Тип: ${b.type}<br/>Уровень: ${b.level} ${owner?('<br/>Владелец: '+owner):''}${workersText}<br/>${editBtn} ${delBtn} ${hireWood} ${hireMiner} ${hireFermer} ${upBtn} ${baseUp}`;
 }
-function nextBaseCost(){ return (baseMeta.level>=4)?null:BASE_LEVELS[baseMeta.level+1].cost; }
-function nextCostFor(b){
-  if(b.type==='drovosekdom') return (b.level>=4)?null:DROVOSEKDOM_LEVELS[b.level+1].cost;
-  if(b.type==='minehouse')   return (b.level>=4)?null:MINEHOUSE_LEVELS[b.level+1].cost;
-  if(b.type==='fermerdom')   return (b.level>=4)?null:FERMERVOM_LEVELS[b.level+1].cost;
-  return null;
-}
 
-/* наборы работников у своих домов */
-const woodcuttersByHome = new Map();
-const minersByHome = new Map();
-const farmersByHome = new Map();
-
-/* добавить маркер на карту (вызов из онснапшот) */
+/* добавить/обновить маркер по документу */
 function renderBuildingDoc(id, data){
   const b = { id, ...data };
   const existed = markers.has(id);
@@ -411,6 +416,8 @@ function renderBuildingDoc(id, data){
     const spec = iconSpecForType(b.type, b.level||1);
     const iconUrl = iconUrlForType(b.type);
     const marker=L.marker([b.lat,b.lng],{icon:L.icon({iconUrl, iconSize:spec.size, iconAnchor:spec.anchor})}).addTo(map);
+    setMarkerHidden(marker, !isSpriteZoomVisible(map.getZoom()));
+
     marker.options.owner=b.owner; marker.options.buildingId=id; marker.currentIcon=iconUrl;
     marker.bindPopup(makePopupHtml(b));
     marker.on('click', ()=>{
@@ -428,7 +435,6 @@ function renderBuildingDoc(id, data){
     if(b.type==='minehouse'   && b.owner===uid && !minersByHome.has(id))     minersByHome.set(id, new Set());
     if(b.type==='fermerdom'   && b.owner===uid && !farmersByHome.has(id))    farmersByHome.set(id, new Set());
   } else {
-    // обновление уровня / попапа
     const marker = markers.get(id);
     const prev = buildingData.get(id);
     buildingData.set(id, b);
@@ -439,10 +445,9 @@ function renderBuildingDoc(id, data){
     }
   }
 
-  // если это наша база — включаем зону
   if(b.type==='base' && b.owner===uid){
     baseMarker = markers.get(id);
-    if(!baseMeta.level){ // первая установка локальных параметров
+    if(!baseMeta.level){
       baseMeta.level = 1;
       baseMeta.color = randomBrightColor();
       baseMeta.paintSize = BASE_LEVELS[1].paint;
@@ -451,8 +456,6 @@ function renderBuildingDoc(id, data){
     applyBaseZone();
   }
 }
-
-/* удалить маркер (из онснапшот) */
 function unrenderBuildingDoc(id){
   const marker = markers.get(id);
   const b = buildingData.get(id);
@@ -461,7 +464,10 @@ function unrenderBuildingDoc(id){
   markers.delete(id);
   buildingData.delete(id);
 
-  if(b?.type==='base' && b.owner===uid){ if(baseZone){ baseZone.remove(); baseZone=null; } baseMarker=null; baseMeta={ level:0, color:randomBrightColor(), paintSize:32, poly:{angles:[],radii:[]} }; }
+  if(b?.type==='base' && b.owner===uid){
+    if(baseZone){ baseZone.remove(); baseZone=null; }
+    baseMarker=null; baseMeta={ level:0, color:randomBrightColor(), paintSize:32, poly:{angles:[],radii:[]} };
+  }
 }
 
 /* ---------- Firestore listeners ---------- */
@@ -469,7 +475,6 @@ let buildingsUnsub = null;
 let playerUnsub = null;
 
 function startRealtime(){
-  // игрок
   playerDocRef = doc(db, 'players', uid);
   playerUnsub = onSnapshot(playerDocRef, snap=>{
     if(snap.exists()){
@@ -484,7 +489,6 @@ function startRealtime(){
     }
   });
 
-  // здания (все игроки)
   buildingsUnsub = onSnapshot(collection(db,'buildings'), snap=>{
     snap.docChanges().forEach(ch=>{
       if(ch.type==='added' || ch.type==='modified') renderBuildingDoc(ch.doc.id, ch.doc.data());
@@ -492,8 +496,6 @@ function startRealtime(){
     });
   });
 }
-
-/* создать/инициализировать профиль, если нет */
 async function ensurePlayerDoc(){
   const s = await getDoc(playerDocRef);
   if(!s.exists()){
@@ -508,22 +510,23 @@ async function ensurePlayerDoc(){
 onAuthStateChanged(auth, async user=>{
   if(user){
     uid = user.uid;
-    userName.textContent = user.displayName || user.email;
-    loginBtn.style.display='none'; logoutBtn.style.display='inline-block';
+    userName.textContent = user.displayName || user.email || 'Player';
+    loginBtn.style.display='inline-block'; // оставим, но серым не будет
+    loginBtn.textContent = 'Сменить аккаунт';
+    logoutBtn.style.display='inline-block';
     await ensurePlayerDoc();
     startRealtime();
   } else {
     uid = null;
     userName.textContent = '';
-    loginBtn.style.display='inline-block'; logoutBtn.style.display='none';
-    // остановить слушатели
+    loginBtn.textContent = 'Войти с Google';
+    logoutBtn.style.display='none';
     buildingsUnsub?.(); playerUnsub?.();
     buildingsUnsub = playerUnsub = null;
   }
 });
 
-/* ---------- Игровая логика (остаток как у тебя) ---------- */
-/* ====== ресурсы на карте (локальные декоративные маркеры) ====== */
+/* ====== ресурсы на карте (декоративные) ====== */
 const TREE_ICONS = [
   new L.Icon({iconUrl:'./images/Tree1.png', iconSize:[48,48], iconAnchor:[24,36]}),
   new L.Icon({iconUrl:'./images/Tree2.png', iconSize:[48,48], iconAnchor:[24,36]}),
@@ -556,8 +559,7 @@ function pickPointNear(latlng, maxM, minM){
            lng: latlng.lng + metersToLng(r*Math.cos(ang), latlng.lat) };
 }
 function getDomAnchors(type){
-  const anchors=[];
-  buildingData.forEach((b,id)=>{ if(b.type===type){ const m=markers.get(id); if(m) anchors.push(m.getLatLng()); } });
+  const anchors=[]; buildingData.forEach((b,id)=>{ if(b.type===type){ const m=markers.get(id); if(m) anchors.push(m.getLatLng()); } });
   return anchors;
 }
 function spawnTreesBatch(){
@@ -686,23 +688,12 @@ function completeHarvest(workerMarker, targetMap, gainMin=2, gainMax=5){
   if(w.harvest.ui){ map.removeLayer(w.harvest.ui.marker); w.harvest.ui=null; }
   w.harvest.targetId=null; w.state='return';
 }
-function updateHarvestUI(workerMarker){
-  const w = workerMarker.worker; if(!w.harvest.ui) return;
-  const p = Math.min(1, (performance.now() - w.harvest.startTs)/w.harvest.durationMs);
-  w.harvest.ui.bar.style.width = (p*100).toFixed(0)+'%';
-  w.harvest.ui.marker.setLatLng(workerMarker.getLatLng());
-  if(p>=1){
-    const pool = (w.type==='wood')?trees:(w.type==='miner')?rocks:corn;
-    completeHarvest(workerMarker, pool, 2,5);
-  }
-}
 async function deliverResources(workerMarker){
   const w = workerMarker.worker; if(w.cargo<=0) return;
   if(w.type==='wood'){ resources.wood += w.cargo; showToast(`🪵 +${w.cargo}`,[],900); }
   else if(w.type==='miner'){ resources.stone += w.cargo; showToast(`🪨 +${w.cargo}`,[],900); }
   else { resources.corn += w.cargo; showToast(`🌽 +${w.cargo}`,[],900); }
   addXP(w.cargo*2); w.cargo=0; updateResourcePanel();
-  // сохранить ресурсы
   if(uid && playerDocRef) await updateDoc(playerDocRef, { wood:resources.wood, stone:resources.stone, corn:resources.corn, level, xp });
 }
 let __lastTs = performance.now();
@@ -774,9 +765,11 @@ const STONE_PER_PACK = 10, STONE_PRICE = 150;
 const CORN_PER_PACK  = 10, CORN_PRICE  = 150;
 let marketResource = 'wood';
 
-marketBtn.onclick = ()=>{ overlay.style.display='block'; marketMenu.style.display='block'; setMarketResource(marketResource); updateMarketUI(0,true); };
-overlay.onclick = ()=>{ overlay.style.display='none'; marketMenu.style.display='none'; };
-mCancel.onclick = overlay.onclick;
+function openMarket(){ overlay.style.display='block'; marketMenu.style.display='block'; setMarketResource(marketResource); updateMarketUI(0,true); }
+function closeMarket(){ overlay.style.display='none'; marketMenu.style.display='none'; }
+
+marketBtn.onclick = openMarket;
+overlay.onclick = closeMarket; mCancel.onclick = closeMarket;
 
 function setMarketResource(res){
   marketResource = res;
@@ -804,8 +797,7 @@ mSell.onclick = async ()=>{
   if(marketResource==='wood'){ const need=packs*WOOD_PER_PACK; if(resources.wood<need) return showToast('Недостаточно дерева',[],1500); resources.wood-=need; resources.money+=packs*WOOD_PRICE; }
   else if(marketResource==='stone'){ const need=packs*STONE_PER_PACK; if(resources.stone<need) return showToast('Недостаточно камня',[],1500); resources.stone-=need; resources.money+=packs*STONE_PRICE; }
   else { const need=packs*CORN_PER_PACK; if(resources.corn<need) return showToast('Недостаточно кукурузы',[],1500); resources.corn-=need; resources.money+=packs*CORN_PRICE; }
-  updateResourcePanel();
-  overlay.onclick();
+  updateResourcePanel(); closeMarket();
   if(uid && playerDocRef) await updateDoc(playerDocRef, { money:resources.money, wood:resources.wood, stone:resources.stone, corn:resources.corn });
   showToast('Сделка совершена!',[],1200);
 };
@@ -821,16 +813,20 @@ shopPanel.querySelectorAll('.card').forEach(card=>{
   });
 });
 
-let placementMode = { active:false, blueprint:null }, ghostMarker=null;
+let placementMode = { active:false, blueprint:null }, ghostMarker=null, ghostFollow=null;
 function makeGhostForBlueprint(bp){
   removeGhost();
   const spec = iconSpecForType(bp.type, 1);
   const icon = L.icon({iconUrl: bp.iconUrl, iconSize: spec.size, iconAnchor: spec.anchor});
   ghostMarker = L.marker(map.getCenter(), {icon, interactive:false, opacity:0.6}).addTo(map);
   setMarkerHidden(ghostMarker, !isSpriteZoomVisible(map.getZoom()));
-  map.on('mousemove', e=>{ if(ghostMarker) ghostMarker.setLatLng(e.latlng); });
+  ghostFollow = (e)=>{ if(ghostMarker) ghostMarker.setLatLng(e.latlng); };
+  map.on('mousemove', ghostFollow);
 }
-function removeGhost(){ if(ghostMarker){ map.removeLayer(ghostMarker); ghostMarker=null; } }
+function removeGhost(){
+  if(ghostMarker){ map.removeLayer(ghostMarker); ghostMarker=null; }
+  if(ghostFollow){ map.off('mousemove', ghostFollow); ghostFollow=null; }
+}
 function pointInsideBase(latlng){
   if(!baseMarker || !baseMeta.level) return true; // разрешить поставить базу
   const pts = polyToLatLngs(baseMarker.getLatLng(), baseMeta.poly);
@@ -853,19 +849,15 @@ map.on('click', async e=>{
   if(!placementMode.active) return;
   const bp = placementMode.blueprint;
   if(bp.type!=='base' && !pointInsideBase(e.latlng)){ showToast('Строить можно только в зоне вашей базы.',[],1800); return; }
-  // списать деньги локально и на сервере
-  if(bp.cost>0){ resources.money -= bp.cost; updateResourcePanel(); await updateDoc(playerDocRef, { money:resources.money }); }
-
-  // создать документ здания — онснапшот сам отрисует
+  if(bp.cost>0){ resources.money -= bp.cost; updateResourcePanel(); if(uid && playerDocRef) await updateDoc(playerDocRef, { money:resources.money }); }
   await addDoc(collection(db,'buildings'), {
     owner: uid, type: bp.type, name: bp.name||bp.type, level: 1,
     lat: e.latlng.lat, lng: e.latlng.lng, createdAt: serverTimestamp()
   });
-
   placementMode = {active:false, blueprint:null}; removeGhost();
 });
 
-/* апгрейды/удаление — пишем в Firestore, аудит через онснапшот */
+/* апгрейды/удаление */
 window.deleteBuilding = async function(id){
   const b = buildingData.get(id); if(!b || b.owner!==uid) return alert('Можно удалять только свои здания.');
   await deleteDoc(doc(db,'buildings', id));
@@ -874,7 +866,7 @@ window.upgradeBuilding = async function(id){
   const b = buildingData.get(id); if(!b || b.owner!==uid) return;
   if(b.level>=4) return showToast('Макс. уровень.',[],1200);
   const cost = nextCostFor(b); if(resources.money<cost) return showToast('Недостаточно денег.',[],1200);
-  resources.money -= cost; updateResourcePanel(); await updateDoc(playerDocRef, { money:resources.money });
+  resources.money -= cost; updateResourcePanel(); if(uid && playerDocRef) await updateDoc(playerDocRef, { money:resources.money });
   await updateDoc(doc(db,'buildings', id), { level: b.level+1 });
   showToast('Здание улучшено!',[],1200);
 };
@@ -882,11 +874,10 @@ window.upgradeBase = async function(){
   if(!baseMarker) return;
   if(baseMeta.level>=4) return showToast('Макс. уровень базы.',[],1200);
   const cost = nextBaseCost(); if(resources.money<cost) return showToast('Недостаточно денег.',[],1200);
-  // визуально «раздуть» зону
   const oldR = BASE_LEVELS[baseMeta.level].radius; baseMeta.level+=1; const newR=BASE_LEVELS[baseMeta.level].radius;
   for(let i=0;i<baseMeta.poly.radii.length;i++){ baseMeta.poly.radii[i] += (newR-oldR)*(0.6+Math.random()*0.8); }
   resources.money -= cost; updateResourcePanel(); applyBaseZone();
-  await updateDoc(playerDocRef, { money:resources.money });
+  if(uid && playerDocRef) await updateDoc(playerDocRef, { money:resources.money });
 };
 
 /* ===== горячие клавиши ===== */
@@ -897,7 +888,7 @@ document.addEventListener('keydown', e=>{
   }
 });
 
-/* ===== редактор (локально, без сохранения в Cloud Storage) ===== */
+/* ===== редактор спрайта ===== */
 const editMenu=document.getElementById('editMenu');
 const canvas=document.getElementById('paintCanvas');
 const ctx=canvas.getContext('2d');
@@ -935,7 +926,7 @@ document.getElementById('saveSprite').onclick=()=>{
 };
 closeEditorBtn.onclick=()=>{ editMenu.style.display='none'; editingMarker=null; };
 
-/* ===== init loops ===== */
+/* ===== init ===== */
 spawnTreesBatch(); spawnRocksBatch(); spawnCornBatch();
 setInterval(spawnTreesBatch, TREE_SPAWN_INTERVAL_MS);
 setInterval(spawnRocksBatch, ROCK_SPAWN_INTERVAL_MS);
@@ -952,6 +943,9 @@ function showToast(html, actions=[] , timeoutMs=0){
   }
   toasts.appendChild(t); if(timeoutMs>0){ setTimeout(()=>{ if(t.parentNode) toasts.removeChild(t); }, timeoutMs); }
 }
+
+/* на всякий случай — подсветить ошибки вместо «мертвых» кнопок */
+window.addEventListener('error', e=> showToast('JS error: '+e.message,[],4000));
 </script>
 </body>
 </html>
