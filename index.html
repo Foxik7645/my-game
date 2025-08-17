@@ -16,25 +16,41 @@
   .small {font-size:12px; color:#aaa;}
   .leaflet-marker-icon, .leaflet-div-icon img {image-rendering: pixelated !important;}
   .pixel {font-family:'Press Start 2P', 'VT323', monospace;}
+
+  /* Ресурсы */
   #resources {display:flex; flex-wrap:wrap; align-items:center; gap:10px; padding:6px 8px; background:#232323; border:1px solid #3a3a3a; border-radius:10px;}
   .res {display:flex; align-items:center; gap:6px; padding:4px 8px; background:#1a1a1a; border:1px solid #3a3a3a; border-radius:8px;}
   .res b {font-variant-numeric: tabular-nums;}
+
+  /* Тосты */
   #toasts {position:fixed; right:12px; bottom:12px; display:flex; flex-direction:column; gap:8px; z-index:2500;}
   .toast {background:#2d2b2d; border:1px solid #444; border-radius:10px; padding:10px 12px; box-shadow:0 8px 24px rgba(0,0,0,0.35); min-width:280px;}
   .toast .actions {margin-top:8px; display:flex; gap:8px; justify-content:flex-end;}
+
+  /* Выделение */
   .marker-selected {filter: drop-shadow(0 0 6px rgba(0,255,255,0.8));}
+
+  /* Прогресс-бар */
   .progress-wrap {background:rgba(0,0,0,0.6); border:1px solid #777; width:64px; height:8px; border-radius:10px; overflow:hidden; transform: translate(-50%,-130%);}
   .progress-bar {height:100%; width:0%; background:#66e089;}
+
+  /* Рабочие как divIcon */
   .worker {width:48px; height:48px; transform: translate(-50%, -50%);}
   .worker img {width:48px; height:48px;}
   .flip-x {transform: scaleX(-1);}
+
+  /* === РЕДАКТОР (пейнт) === */
   #editMenu {position:fixed; top:96px; right:10px; background:#2b2b2b; padding:12px; border-radius:12px; display:none; flex-direction:column; gap:8px; z-index:2200; width:340px; box-shadow:0 8px 24px rgba(0,0,0,0.35);}
   #editMenu h4 {margin:0 0 4px 0; font-size:14px;}
   #paintCanvas {image-rendering:pixelated; border:1px solid #555; background:#000; width:480px; height:480px; align-self:center;}
   .colorPalette {display:flex; flex-wrap:wrap; gap:4px; margin-top:4px;}
   .colorTile {width:18px; height:18px; cursor:pointer; border:1px solid #555;}
   #canvasInfo {color:#aaa; font-size:12px;}
+
+  /* Оверлей */
   #overlay {position:fixed; inset:0; background:rgba(0,0,0,0.5); display:none; z-index:2100;}
+
+  /* Рынок */
   #marketMenu{
     position:fixed; top:50%; left:50%; transform:translate(-50%,-50%);
     background:#2b2b2b; border:1px solid #444; border-radius:12px; padding:16px; width:540px; max-width:95vw; z-index:2200;
@@ -50,6 +66,8 @@
   .tabs {display:flex; gap:8px; margin-bottom:8px;}
   .tabs button {background:#333}
   .tabs .active {background:#555}
+
+  /* Левая панель магазина */
   #shopPanel{
     position:fixed; top:88px; left:0; bottom:0; width:330px;
     background:#222; border-right:1px solid #3a3a3a; z-index:2150;
@@ -62,10 +80,10 @@
     image-rendering:pixelated; border-radius:12px; box-shadow:0 10px 18px rgba(0,0,0,.35);
     cursor:pointer; overflow:hidden;
   }
-  .card.drov {background:url('C:/Users/novik/OneDrive/Рабочий стол/map-game/public/images/CardDrovosek.png') center/cover no-repeat;}
-  .card.miner {background:url('C:/Users/novik/OneDrive/Рабочий стол/map-game/public/images/CardMiner.png') center/cover no-repeat;}
-  .card.base {background:url('C:/Users/novik/OneDrive/Рабочий стол/map-game/public/images/CardBase.png') center/cover no-repeat;}
-  .card.fermer {background:url('C:/Users/novik/OneDrive/Рабочий стол/map-game/public/images/Cardeda.png') center/cover no-repeat;}
+  .card.drov {background:url('./images/CardDrovosek.png') center/cover no-repeat;}
+  .card.miner {background:url('./images/CardMiner.png') center/cover no-repeat;}
+  .card.base {background:url('./images/CardBase.png') center/cover no-repeat;}
+  .card.fermer {background:url('./images/Cardeda.png') center/cover no-repeat;}
   .card .title{position:absolute; top:18px; left:84px; right:16px; font-size:13px; color:var(--cream); text-shadow:0 1px 0 #000;}
   .card .cost {position:absolute; top:46px; left:84px; right:16px; font-size:12px; color:var(--cream); text-shadow:0 1px 0 #000;}
   .card .desc {position:absolute; left:30px; right:30px; bottom:22px; font-size:12px; line-height:1.25; color:var(--cream); text-shadow:0 1px 0 #000;}
@@ -78,6 +96,8 @@
   .card.active .buybar{ transform:translateY(0); }
   .buybar .price{font-size:12px; color:var(--accent)}
   .card:hover{filter:brightness(1.07);}
+
+  /* Скрытие спрайтов при далёком зуме */
   .is-hidden {opacity:0; pointer-events:none;}
 </style>
 </head>
@@ -93,6 +113,7 @@
   </div>
 </div>
 
+<!-- Редактор -->
 <div id="editMenu">
   <h4>Редактор спрайта</h4>
   <canvas id="paintCanvas" width="60" height="60"></canvas>
@@ -104,6 +125,7 @@
   </div>
 </div>
 
+<!-- Оверлей + Рынок -->
 <div id="overlay"></div>
 
 <div id="marketMenu">
@@ -135,12 +157,15 @@
   </div>
 </div>
 
+<!-- Магазин (левая панель) -->
 <aside id="shopPanel">
   <div id="shopHeader">
     <h3 class="pixel">Магазин</h3>
     <button id="shopClose">×</button>
   </div>
-  <div class="card drov pixel" data-type="drovosekdom" data-cost="100" data-icon="C:/Users/novik/OneDrive/Рабочий стол/map-game/public/images/DrovosekDom.png" data-name="DrovosekDom">
+
+  <!-- Дом дровосека -->
+  <div class="card drov pixel" data-type="drovosekdom" data-cost="100" data-icon="./images/DrovosekDom.png" data-name="DrovosekDom">
     <div class="buybar">
       <span class="price">100 💰</span>
       <button class="buyBtn">Купить</button>
@@ -149,7 +174,9 @@
     <div class="cost">Стоимость: 100</div>
     <div class="desc">Дом дровосека. Рабочие добывают дерево рядом и носят в дом.</div>
   </div>
-  <div class="card miner pixel" data-type="minehouse" data-cost="100" data-icon="C:/Users/novik/OneDrive/Рабочий стол/map-game/public/images/Minehouse.png" data-name="Minehouse">
+
+  <!-- Дом шахтёра -->
+  <div class="card miner pixel" data-type="minehouse" data-cost="100" data-icon="./images/Minehouse.png" data-name="Minehouse">
     <div class="buybar">
       <span class="price">100 💰</span>
       <button class="buyBtn">Купить</button>
@@ -158,7 +185,9 @@
     <div class="cost">Стоимость: 100</div>
     <div class="desc">Дом шахтёра. Поблизости появляются камни. Шахтёры добывают и несут в дом.</div>
   </div>
-  <div class="card base pixel" data-type="base" data-cost="0" data-icon="C:/Users/novik/OneDrive/Рабочий стол/map-game/public/images/Base.png" data-name="База">
+
+  <!-- База -->
+  <div class="card base pixel" data-type="base" data-cost="0" data-icon="./images/Base.png" data-name="База">
     <div class="buybar">
       <span class="price">Бесплатно</span>
       <button class="buyBtn">Поставить</button>
@@ -167,8 +196,9 @@
     <div class="cost">Стоимость: 0</div>
     <div class="desc">Главная точка. Даст цветную зону строительства с апгрейдами.</div>
   </div>
-  <!-- Новая карточка для Cardeda -->
-  <div class="card fermer pixel" data-type="fermerdom" data-cost="100" data-icon="C:/Users/novik/OneDrive/Рабочий стол/map-game/public/images/FermerDom.png" data-name="FermerDom">
+
+  <!-- Фермер -->
+  <div class="card fermer pixel" data-type="fermerdom" data-cost="100" data-icon="./images/FermerDom.png" data-name="FermerDom">
     <div class="buybar">
       <span class="price">100 💰</span>
       <button class="buyBtn">Купить</button>
@@ -305,12 +335,12 @@ function updateBaseIcon(){
   if(!baseMarker) return;
   const lvl = BASE_LEVELS[baseMeta.level];
   const icon=L.icon({
-    iconUrl: 'C:/Users/novik/OneDrive/Рабочий стол/map-game/public/images/Base.png',
+    iconUrl: './images/Base.png',
     iconSize:[lvl.icon,lvl.icon],
     iconAnchor:[lvl.icon/2,lvl.icon/2]
   });
   baseMarker.setIcon(icon);
-  baseMarker.currentIcon='C:/Users/novik/OneDrive/Рабочий стол/map-game/public/images/Base.png';
+  baseMarker.currentIcon='./images/Base.png';
   const b = buildingData.get(baseMarker.options.buildingId);
   if(b) baseMarker.bindPopup(makePopupHtml(b));
 }
@@ -321,7 +351,7 @@ function updateDrovosekDomIcon(id){
   if(!b || b.type !== 'drovosekdom') return;
   const lvl = DROVOSEKDOM_LEVELS[b.level];
   const icon = L.icon({
-    iconUrl: marker.currentIcon || 'C:/Users/novik/OneDrive/Рабочий стол/map-game/public/images/DrovosekDom.png',
+    iconUrl: marker.currentIcon || './images/DrovosekDom.png',
     iconSize: [lvl.icon, lvl.icon],
     iconAnchor: [lvl.icon/2, lvl.icon/2]
   });
@@ -335,7 +365,7 @@ function updateFermerDomIcon(id){
   if(!b || b.type !== 'fermerdom') return;
   const lvl = FERMERVOM_LEVELS[b.level];
   const icon = L.icon({
-    iconUrl: marker.currentIcon || 'C:/Users/novik/OneDrive/Рабочий стол/map-game/public/images/FermerDom.png',
+    iconUrl: marker.currentIcon || './images/FermerDom.png',
     iconSize: [lvl.icon, lvl.icon],
     iconAnchor: [lvl.icon/2, lvl.icon/2]
   });
@@ -376,11 +406,11 @@ function iconSpecForType(type, level=1){
   return {size:[64,64], anchor:[32,32]};
 }
 function iconUrlForType(type, fallback){
-  if(type==='base') return 'C:/Users/novik/OneDrive/Рабочий стол/map-game/public/images/Base.png';
-  if(type==='drovosekdom') return 'C:/Users/novik/OneDrive/Рабочий стол/map-game/public/images/DrovosekDom.png';
-  if(type==='minehouse')   return 'C:/Users/novik/OneDrive/Рабочий стол/map-game/public/images/Minehouse.png';
-  if(type==='fermerdom')   return 'C:/Users/novik/OneDrive/Рабочий стол/map-game/public/images/FermerDom.png';
-  return fallback || 'C:/Users/novik/OneDrive/Рабочий стол/map-game/public/images/House.png';
+  if(type==='base') return './images/Base.png';
+  if(type==='drovosekdom') return './images/DrovosekDom.png';
+  if(type==='minehouse')   return './images/Minehouse.png';
+  if(type==='fermerdom')   return './images/FermerDom.png';
+  return fallback || './images/House.png';
 }
 function makePopupHtml(b){
   const owner = b.owner ? b.owner.slice(0,8) : '';
@@ -484,9 +514,8 @@ window.upgradeBase = function(){
 
 window.upgradeDrovosekDom = function(id){
   const marker = markers.get(id);
-  if(!marker) return;
   const b = buildingData.get(id);
-  if(!b || b.type !== 'drovosekdom' || b.owner !== playerId) return;
+  if(!marker || !b || b.type !== 'drovosekdom' || b.owner !== playerId) return;
   if(b.level >= 4){ alert('Максимальный уровень дома дровосека.'); return; }
   const cost = nextDrovosekDomCost(id);
   if(resources.money < cost){ showToast('Недостаточно денег для апгрейда дома дровосека.',[],1600); return; }
@@ -499,9 +528,8 @@ window.upgradeDrovosekDom = function(id){
 
 window.upgradeFermerDom = function(id){
   const marker = markers.get(id);
-  if(!marker) return;
   const b = buildingData.get(id);
-  if(!b || b.type !== 'fermerdom' || b.owner !== playerId) return;
+  if(!marker || !b || b.type !== 'fermerdom' || b.owner !== playerId) return;
   if(b.level >= 4){ alert('Максимальный уровень дома фермера.'); return; }
   const cost = nextFermerDomCost(id);
   if(resources.money < cost){ showToast('Недостаточно денег для апгрейда дома фермера.',[],1600); return; }
@@ -572,28 +600,28 @@ document.getElementById('saveSprite').onclick=()=>{
 closeEditorBtn.onclick=()=>{ editMenu.style.display='none'; editingMarker=null; };
 
 /* ===============================
-   РЕСУРСНЫЕ ОБЪЕКТЫ (деревья/камни/кукуруза)
+   РЕСУРСЫ НА КАРТЕ
 ================================ */
 const TREE_ICONS = [
-  new L.Icon({iconUrl:'C:/Users/novik/OneDrive/Рабочий стол/map-game/public/images/Tree1.png', iconSize:[48,48], iconAnchor:[24,36]}),
-  new L.Icon({iconUrl:'C:/Users/novik/OneDrive/Рабочий стол/map-game/public/images/Tree2.png', iconSize:[48,48], iconAnchor:[24,36]}),
-  new L.Icon({iconUrl:'C:/Users/novik/OneDrive/Рабочий стол/map-game/public/images/Tree3.png', iconSize:[48,48], iconAnchor:[24,36]}),
+  new L.Icon({iconUrl:'./images/Tree1.png', iconSize:[48,48], iconAnchor:[24,36]}),
+  new L.Icon({iconUrl:'./images/Tree2.png', iconSize:[48,48], iconAnchor:[24,36]}),
+  new L.Icon({iconUrl:'./images/Tree3.png', iconSize:[48,48], iconAnchor:[24,36]}),
 ];
 const trees = new Map();
 const TREE_CAP = 50, TREE_SPAWN_INTERVAL_MS = 60_000, TREE_RADIUS_MAX_M = 100, TREE_RADIUS_MIN_M = 20;
 
 const ROCK_ICONS = [
-  new L.Icon({iconUrl:'C:/Users/novik/OneDrive/Рабочий стол/map-game/public/images/Kamen.png',  iconSize:[48,48], iconAnchor:[24,36]}),
-  new L.Icon({iconUrl:'C:/Users/novik/OneDrive/Рабочий стол/map-game/public/images/Kamen2.png', iconSize:[48,48], iconAnchor:[24,36]}),
-  new L.Icon({iconUrl:'C:/Users/novik/OneDrive/Рабочий стол/map-game/public/images/Kamen3.png', iconSize:[48,48], iconAnchor:[24,36]}),
+  new L.Icon({iconUrl:'./images/Kamen.png',  iconSize:[48,48], iconAnchor:[24,36]}),
+  new L.Icon({iconUrl:'./images/Kamen2.png', iconSize:[48,48], iconAnchor:[24,36]}),
+  new L.Icon({iconUrl:'./images/Kamen3.png', iconSize:[48,48], iconAnchor:[24,36]}),
 ];
 const rocks = new Map();
 const ROCK_CAP = 50, ROCK_SPAWN_INTERVAL_MS = 60_000, ROCK_RADIUS_MAX_M = 100, ROCK_RADIUS_MIN_M = 20;
 
 const CORN_ICONS = [
-  new L.Icon({iconUrl:'C:/Users/novik/OneDrive/Рабочий стол/map-game/public/images/Corn.png',  iconSize:[48,48], iconAnchor:[24,36]}),
-  new L.Icon({iconUrl:'C:/Users/novik/OneDrive/Рабочий стол/map-game/public/images/Corn2.png', iconSize:[48,48], iconAnchor:[24,36]}),
-  new L.Icon({iconUrl:'C:/Users/novik/OneDrive/Рабочий стол/map-game/public/images/Corn3.png', iconSize:[48,48], iconAnchor:[24,36]}),
+  new L.Icon({iconUrl:'./images/Corn.png',  iconSize:[48,48], iconAnchor:[24,36]}),
+  new L.Icon({iconUrl:'./images/Corn2.png', iconSize:[48,48], iconAnchor:[24,36]}),
+  new L.Icon({iconUrl:'./images/Corn3.png', iconSize:[48,48], iconAnchor:[24,36]}),
 ];
 const corn = new Map();
 const CORN_CAP = 50, CORN_SPAWN_INTERVAL_MS = 60_000, CORN_RADIUS_MAX_M = 100, CORN_RADIUS_MIN_M = 20;
@@ -657,9 +685,9 @@ function spawnCornBatch(){
 /* ===============================
    РАБОЧИЕ (дровосеки / шахтёры / фермеры)
 ================================ */
-const WC_FRAMES = ['C:/Users/novik/OneDrive/Рабочий стол/map-game/public/images/Drovosek1.png','C:/Users/novik/OneDrive/Рабочий стол/map-game/public/images/Drovosek2.png','C:/Users/novik/OneDrive/Рабочий стол/map-game/public/images/Drovosek3.png','C:/Users/novik/OneDrive/Рабочий стол/map-game/public/images/Drovosek4.png'];
-const MINER_FRAMES = ['C:/Users/novik/OneDrive/Рабочий стол/map-game/public/images/Miner1.png','C:/Users/novik/OneDrive/Рабочий стол/map-game/public/images/Miner2.png','C:/Users/novik/OneDrive/Рабочий стол/map-game/public/images/Miner3.png','C:/Users/novik/OneDrive/Рабочий стол/map-game/public/images/Miner4.png'];
-const FERM_FRAMES = ['C:/Users/novik/OneDrive/Рабочий стол/map-game/public/images/ferma1.png','C:/Users/novik/OneDrive/Рабочий стол/map-game/public/images/ferma2.png','C:/Users/novik/OneDrive/Рабочий стол/map-game/public/images/ferma3.png','C:/Users/novik/OneDrive/Рабочий стол/map-game/public/images/ferma4.png'];
+const WC_FRAMES = ['./images/Drovosek1.png','./images/Drovosek2.png','./images/Drovosek3.png','./images/Drovosek4.png'];
+const MINER_FRAMES = ['./images/Miner1.png','./images/Miner2.png','./images/Miner3.png','./images/Miner4.png'];
+const FERM_FRAMES = ['./images/ferma1.png','./images/ferma2.png','./images/ferma3.png','./images/ferma4.png'];
 const IDLE_INDEX = 1, FRAME_INTERVAL_MS = 160;
 const STEP_SPEED = 0.0009, ARRIVE_EPS = 0.00008;
 
@@ -954,7 +982,7 @@ mSell.onclick = ()=>{
 };
 
 /* ===============================
-   МАГАЗИН (панель + «призрак») и ПОКУПКИ
+   МАГАЗИН (панель + «призрак»)
 ================================ */
 const shopPanel = document.getElementById('shopPanel');
 const shopToggle = document.getElementById('shopToggle');
