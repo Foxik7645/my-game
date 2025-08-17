@@ -80,9 +80,11 @@
     image-rendering:pixelated; border-radius:12px; box-shadow:0 10px 18px rgba(0,0,0,.35);
     cursor:pointer; overflow:hidden;
   }
-  .card.drov {background:url('/images/CardDrovosek.png') center/cover no-repeat;}
-  .card.miner {background:url('/images/CardMiner.png') center/cover no-repeat;}
-  .card.base {background:url('/images/CardBase.png') center/cover no-repeat;} /* при желании заменить артом карты базы */
+  /* ВАЖНО: относительные пути */
+  .card.drov  {background:url('images/CardDrovosek.png') center/cover no-repeat;}
+  .card.miner {background:url('images/CardMiner.png')   center/cover no-repeat;}
+  /* Если нет отдельной карты базы, можно оставить ту же картинку: */
+  .card.base  {background:url('images/CardDrovosek.png') center/cover no-repeat;}
   .card .title{position:absolute; top:18px; left:84px; right:16px; font-size:13px; color:var(--cream); text-shadow:0 1px 0 #000;}
   .card .cost {position:absolute; top:46px; left:84px; right:16px; font-size:12px; color:var(--cream); text-shadow:0 1px 0 #000;}
   .card .desc {position:absolute; left:30px; right:30px; bottom:22px; font-size:12px; line-height:1.25; color:var(--cream); text-shadow:0 1px 0 #000;}
@@ -96,7 +98,7 @@
   .buybar .price{font-size:12px; color:var(--accent)}
   .card:hover{filter:brightness(1.07);}
 
-  /* Мягкое скрытие спрайтов */
+  /* Мягкое скрытие спрайтов при дальнем зуме */
   .is-hidden {opacity:0; pointer-events:none;}
 </style>
 </head>
@@ -165,7 +167,7 @@
   </div>
 
   <!-- Дом дровосека -->
-  <div class="card drov pixel" data-type="drovosekdom" data-cost="100" data-icon="/images/DrovosekDom.png" data-name="DrovosekDom">
+  <div class="card drov pixel" data-type="drovosekdom" data-cost="100" data-icon="images/DrovosekDom.png" data-name="DrovosekDom">
     <div class="buybar">
       <span class="price">100 💰</span>
       <button class="buyBtn">Купить</button>
@@ -176,7 +178,7 @@
   </div>
 
   <!-- Дом шахтёра -->
-  <div class="card miner pixel" data-type="minehouse" data-cost="100" data-icon="/images/Minehouse.png" data-name="Minehouse">
+  <div class="card miner pixel" data-type="minehouse" data-cost="100" data-icon="images/Minehouse.png" data-name="Minehouse">
     <div class="buybar">
       <span class="price">100 💰</span>
       <button class="buyBtn">Купить</button>
@@ -187,7 +189,7 @@
   </div>
 
   <!-- База -->
-  <div class="card base pixel" data-type="base" data-cost="0" data-icon="/images/Base.png" data-name="База">
+  <div class="card base pixel" data-type="base" data-cost="0" data-icon="images/Base.png" data-name="База">
     <div class="buybar">
       <span class="price">Бесплатно</span>
       <button class="buyBtn">Поставить</button>
@@ -296,12 +298,12 @@ function updateBaseIcon(){
   if(!baseMarker) return;
   const lvl = BASE_LEVELS[baseMeta.level];
   const icon=L.icon({
-    iconUrl: '/images/Base.png',
+    iconUrl: 'images/Base.png',
     iconSize:[lvl.icon,lvl.icon],
     iconAnchor:[lvl.icon/2,lvl.icon/2]
   });
   baseMarker.setIcon(icon);
-  baseMarker.currentIcon='/images/Base.png';
+  baseMarker.currentIcon='images/Base.png';
   const b = buildingData.get(baseMarker.options.buildingId);
   if(b) baseMarker.bindPopup(makePopupHtml(b));
 }
@@ -331,10 +333,10 @@ function iconSpecForType(type){
   return {size:[64,64], anchor:[32,32]};
 }
 function iconUrlForType(type, fallback){
-  if(type==='base') return '/images/Base.png';
-  if(type==='drovosekdom') return '/images/DrovosekDom.png';
-  if(type==='minehouse')   return '/images/Minehouse.png';
-  return fallback || '/images/House.png';
+  if(type==='base') return 'images/Base.png';
+  if(type==='drovosekdom') return 'images/DrovosekDom.png';
+  if(type==='minehouse')   return 'images/Minehouse.png';
+  return fallback || 'images/House.png';
 }
 function makePopupHtml(b){
   const owner = b.owner ? b.owner.slice(0,8) : '';
@@ -485,17 +487,17 @@ closeEditorBtn.onclick=()=>{ editMenu.style.display='none'; editingMarker=null; 
    РЕСУРСНЫЕ ОБЪЕКТЫ (деревья/камни)
 ================================ */
 const TREE_ICONS = [
-  new L.Icon({iconUrl:'/images/Tree1.png', iconSize:[48,48], iconAnchor:[24,36]}),
-  new L.Icon({iconUrl:'/images/Tree2.png', iconSize:[48,48], iconAnchor:[24,36]}),
-  new L.Icon({iconUrl:'/images/Tree3.png', iconSize:[48,48], iconAnchor:[24,36]}),
+  new L.Icon({iconUrl:'images/Tree1.png', iconSize:[48,48], iconAnchor:[24,36]}),
+  new L.Icon({iconUrl:'images/Tree2.png', iconSize:[48,48], iconAnchor:[24,36]}),
+  new L.Icon({iconUrl:'images/Tree3.png', iconSize:[48,48], iconAnchor:[24,36]}),
 ];
 const trees = new Map();
 const TREE_CAP = 50, TREE_SPAWN_INTERVAL_MS = 60_000, TREE_RADIUS_MAX_M = 100, TREE_RADIUS_MIN_M = 20;
 
 const ROCK_ICONS = [
-  new L.Icon({iconUrl:'/images/Kamen.png',  iconSize:[48,48], iconAnchor:[24,36]}),
-  new L.Icon({iconUrl:'/images/Kamen2.png', iconSize:[48,48], iconAnchor:[24,36]}),
-  new L.Icon({iconUrl:'/images/Kamen3.png', iconSize:[48,48], iconAnchor:[24,36]}),
+  new L.Icon({iconUrl:'images/Kamen.png',  iconSize:[48,48], iconAnchor:[24,36]}),
+  new L.Icon({iconUrl:'images/Kamen2.png', iconSize:[48,48], iconAnchor:[24,36]}),
+  new L.Icon({iconUrl:'images/Kamen3.png', iconSize:[48,48], iconAnchor:[24,36]}),
 ];
 const rocks = new Map();
 const ROCK_CAP = 50, ROCK_SPAWN_INTERVAL_MS = 60_000, ROCK_RADIUS_MAX_M = 100, ROCK_RADIUS_MIN_M = 20;
@@ -545,8 +547,8 @@ function spawnRocksBatch(){
 /* ===============================
    РАБОЧИЕ (дровосеки / шахтёры)
 ================================ */
-const WC_FRAMES = ['/images/Drovosek1.png','/images/Drovosek2.png','/images/Drovosek3.png','/images/Drovosek4.png'];
-const MINER_FRAMES = ['/images/Miner1.png','/images/Miner2.png','/images/Miner3.png','/images/Miner4.png'];
+const WC_FRAMES = ['images/Drovosek1.png','images/Drovosek2.png','images/Drovosek3.png','images/Drovosek4.png'];
+const MINER_FRAMES = ['images/Miner1.png','images/Miner2.png','images/Miner3.png','images/Miner4.png'];
 const IDLE_INDEX = 1, FRAME_INTERVAL_MS = 160;
 const STEP_SPEED = 0.0009, ARRIVE_EPS = 0.00008;
 
