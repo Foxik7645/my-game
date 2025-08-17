@@ -1,0 +1,181 @@
+{
+  "buildings": [
+    {
+      "id": "meenc1hjvqap9o",
+      "lat": 62.195407343736065,
+      "lng": 41.38001089381272,
+      "type": "house",
+      "owner": "zznnc8guz4meenb7j3",
+      "createdAt": 1755372282247
+    },
+    {
+      "id": "meenc2nx5zjxxw",
+      "lat": 62.19781681036993,
+      "lng": 41.402463331383146,
+      "type": "house",
+      "owner": "zznnc8guz4meenb7j3",
+      "createdAt": 1755372283773
+    },
+    {
+      "id": "meenc31kyx9mtn",
+      "lat": 62.194293685174124,
+      "lng": 41.400746717613615,
+      "type": "house",
+      "owner": "zznnc8guz4meenb7j3",
+      "createdAt": 1755372284264
+    },
+    {
+      "id": "meenc6qlyyicfk",
+      "lat": 62.194620572721746,
+      "lng": 41.40017260179877,
+      "type": "house",
+      "owner": "zznnc8guz4meenb7j3",
+      "createdAt": 1755372289053
+    },
+    {
+      "id": "meenjkvhbihmqg",
+      "lat": 62.19390244487531,
+      "lng": 41.402546167373664,
+      "type": "house",
+      "owner": "zznnc8guz4meenb7j3",
+      "createdAt": 1755372633965
+    },
+    {
+      "id": "meenjx2b7yll1l",
+      "lat": 62.194628131549194,
+      "lng": 41.396033763885505,
+      "type": "house",
+      "owner": "zznnc8guz4meenb7j3",
+      "createdAt": 1755372649763
+    },
+    {
+      "id": "meenkzme820kl4",
+      "lat": 62.195036009856274,
+      "lng": 41.40132308006287,
+      "type": "house",
+      "owner": "zznnc8guz4meenb7j3",
+      "createdAt": 1755372699734
+    },
+    {
+      "id": "meenl27vspib2i",
+      "lat": 55.485079037526134,
+      "lng": 34.13452148437501,
+      "type": "house",
+      "owner": "zznnc8guz4meenb7j3",
+      "createdAt": 1755372703099
+    },
+    {
+      "id": "meenl5hkr3ertr",
+      "lat": 55.92458580482951,
+      "lng": 37.06787109375001,
+      "type": "house",
+      "owner": "zznnc8guz4meenb7j3",
+      "createdAt": 1755372707336
+    },
+    {
+      "id": "meenv3eips72x1",
+      "lat": 61.62467597106484,
+      "lng": 37.66113281250001,
+      "type": "house",
+      "owner": "zznnc8guz4meenb7j3",
+      "createdAt": 1755373171194
+    },
+    {
+      "id": "meenvd7xmyxo4c",
+      "lat": 61.70094188639681,
+      "lng": 37.21755981445313,
+      "type": "house",
+      "owner": "zznnc8guz4meenb7j3",
+      "createdAt": 1755373183917
+    },
+    {
+      "id": "meenvdo3fwd1im",
+      "lat": 61.69247718972528,
+      "lng": 37.25601196289063,
+      "type": "house",
+      "owner": "zznnc8guz4meenb7j3",
+      "createdAt": 1755373184499
+    },
+    {
+      "id": "meenve7aabfp25",
+      "lat": 61.713959962789254,
+      "lng": 37.30682373046876,
+      "type": "house",
+      "owner": "zznnc8guz4meenb7j3",
+      "createdAt": 1755373185190
+    },
+    {
+      "id": "meenvs1qgfq300",
+      "lat": 61.81304225199491,
+      "lng": 38.37112426757813,
+      "type": "house",
+      "owner": "zznnc8guz4meenb7j3",
+      "createdAt": 1755373203134
+    },
+    {
+      "id": "meenyd1ecv48mr",
+      "lat": 62.11416112594049,
+      "lng": 41.47338867187501,
+      "type": "house",
+      "owner": "zznnc8guz4meenb7j3",
+      "createdAt": 1755373323650
+    },
+    {
+      "id": "meeo7577367566",
+      "lat": 55.751025202096315,
+      "lng": 37.61708557605744,
+      "type": "base",
+      "owner": "zznnc8guz4meenb7j3",
+      "createdAt": 1755373733395
+    },
+    {
+      "id": "meeo9sy15296af",
+      "lat": 55.75142371354662,
+      "lng": 37.61615753173829,
+      "type": "house",
+      "owner": "zznnc8guz4meenb7j3",
+      "createdAt": 1755373857481
+    },
+    {
+      "id": "meeo9wbiesjwpw",
+      "lat": 55.75157466379047,
+      "lng": 37.6161414384842,
+      "type": "base",
+      "owner": "zznnc8guz4meenb7j3",
+      "createdAt": 1755373861854
+    },
+    {
+      "id": "meeoa0aram1suw",
+      "lat": 55.75108256384377,
+      "lng": 37.61893630027772,
+      "type": "base",
+      "owner": "zznnc8guz4meenb7j3",
+      "createdAt": 1755373867011
+    },
+    {
+      "id": "meeocm50ss3a2j",
+      "lat": 55.75095274503159,
+      "lng": 37.61856615543366,
+      "type": "base",
+      "owner": "zznnc8guz4meenb7j3",
+      "createdAt": 1755373988628
+    },
+    {
+      "id": "meeodlk3bhq34c",
+      "lat": 55.750991992625025,
+      "lng": 37.616989016532905,
+      "type": "base",
+      "owner": "zznnc8guz4meenb7j3",
+      "createdAt": 1755374034531
+    },
+    {
+      "id": "meeofc97d1bsdp",
+      "lat": 55.751692404575145,
+      "lng": 37.61930644512177,
+      "type": "base",
+      "owner": "zznnc8guz4meenb7j3",
+      "createdAt": 1755374115787
+    }
+  ],
+  "territories": []
+}
