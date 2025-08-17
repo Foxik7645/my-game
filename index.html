@@ -261,9 +261,9 @@ function metersToLat(m){ return m/111000; }
 function metersToLng(m, lat){ return m/(111000*Math.cos(lat*Math.PI/180)); }
 
 /* видимость по зуму */
-const SPRITES_Z_MIN = 11;
-function isSpriteZoomVisible(z){ return z >= SPRITES_Z_MIN; }
-function setMarkerHidden(m, hidden){
+const SPRITES_Z_MIN = 0;
+function isSpriteZoomVisible(){ return true; }
+function setMarkerHidden(m){ /* no-op */ }
   const el = m?.getElement?.();
   if(el){ el.classList.toggle('is-hidden', hidden); }
   if(hidden && m?.isPopupOpen && m.isPopupOpen()) m.closePopup();
