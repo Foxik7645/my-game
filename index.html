@@ -84,7 +84,7 @@
     <div id="xpBar"><div class="fill"></div></div>
   </div>
   <button id="shopToggle">Магазин</button>
- <button id="marketBtn">Рынок</button>
+  <button id="marketBtn">Рынок</button>
   <div id="authBox">
     <span id="userName"></span>
     <button id="loginBtn">Войти с Google</button>
@@ -200,7 +200,7 @@ let playerDocRef = null; // ссылка на players/{uid}
 /* ---------- Игровые состояния (локально) ---------- */
 const XP_PER_LEVEL = 500;
 let level = 1, xp = 0;
-const resources = { money: 100, wood: 10, stone: 10, corn: 10 };
+const resources = { money: 100, wood: 10, stone: 0, corn: 0 };
 /* ---------- helpers UI ---------- */
 function updateResourcePanel(){
   document.getElementById('resources').innerHTML = `
@@ -462,6 +462,25 @@ function startRealtime(){
     console.error('Buildings snapshot error:', error);
     showToast('Ошибка получения данных зданий: ' + error.message, [], 2500);
   });
+  // Пассивный доход от базы
+  setInterval(() => {
+    if (baseMeta.level > 0) {
+      resources.money += baseMeta.level; // Добавляем монеты по уровню базы
+      updateResourcePanel();
+    }
+  }, 1000); // Каждую секунду
+
+  // Сохранение в Firestore каждые 5 секунд
+  setInterval(async () => {
+    if (uid && playerDocRef) {
+      try {
+        await updateDoc(playerDocRef, { money: resources.money });
+        console.log('Money saved to Firestore:', resources.money);
+      } catch (e) {
+        console.error('Error saving money:', e);
+      }
+    }
+  }, 5000); // Каждые 5 секунд
 }
 async function ensurePlayerDoc(){
   if (!uid || !playerDocRef) {
@@ -622,7 +641,7 @@ function createWorker(homeId, type){
   const homePos = homeMarker.getLatLng();
   const startAng=Math.random()*2*Math.PI, startR=randBetween(10,25);
   const lat=homePos.lat + metersToLat(startR)*Math.sin(startAng);
-  const lng=homePos.lng + metersToLng(startR*Math.cos(startAng), homePos.lat);
+  const lng=homePos.lng + metersToLng(startR*Math.cos(ang), homePos.lat);
   const frames = (type==='wood')?WC_FRAMES:(type==='miner')?MINER_FRAMES:FERM_FRAMES;
   const m=L.marker([lat,lng],{icon: makeWorkerDiv(frames[IDLE_INDEX], false)}).addTo(map);
   setMarkerHidden(m, !isSpriteZoomVisible(map.getZoom()));
