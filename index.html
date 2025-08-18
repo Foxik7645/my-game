@@ -361,6 +361,7 @@ function makePopupHtml(b){
 }
 /* добавить/обновить маркер по документу */
 function renderBuildingDoc(id, data){
+  console.log('Rendering building:', id, data); // Debug log
   const b = { id, ...data };
   const existed = markers.has(id);
   if(!existed){
@@ -405,6 +406,7 @@ function renderBuildingDoc(id, data){
   }
 }
 function unrenderBuildingDoc(id){
+  console.log('Unrendering building:', id); // Debug log
   const marker = markers.get(id);
   const b = buildingData.get(id);
   if(!marker) return;
@@ -435,6 +437,7 @@ function startRealtime(){
   });
   buildingsUnsub = onSnapshot(collection(db,'buildings'), snap=>{
     snap.docChanges().forEach(ch=>{
+      console.log('Firestore change:', ch.type, ch.doc.id); // Debug log
       if(ch.type==='added' || ch.type==='modified') renderBuildingDoc(ch.doc.id, ch.doc.data());
       if(ch.type==='removed') unrenderBuildingDoc(ch.doc.id);
     });
@@ -633,6 +636,15 @@ async function deliverResources(workerMarker){
   addXP(w.cargo*2); w.cargo=0; updateResourcePanel();
   if(uid && playerDocRef) await updateDoc(playerDocRef, { wood:resources.wood, stone:resources.stone, corn:resources.corn, level, xp });
 }
+function updateHarvestUI(workerMarker){
+  const w = workerMarker.worker;
+  const elapsed = performance.now() - w.harvest.startTs;
+  const progress = Math.min(1, elapsed / w.harvest.durationMs);
+  w.harvest.ui.bar.style.width = (progress * 100) + '%';
+  if(elapsed >= w.harvest.durationMs){
+    completeHarvest(workerMarker, (w.type==='wood')?trees:(w.type==='miner')?rocks:corn);
+  }
+}
 let __lastTs = performance.now();
 function moveWorkers(){
   const now = performance.now(); const dt = now - __lastTs; __lastTs = now;
@@ -778,6 +790,7 @@ map.on('click', async e=>{
   const bp = placementMode.blueprint;
   if(bp.type!=='base' && !pointInsideBase(e.latlng)){ showToast('Строить можно только в зоне вашей базы.',[],1800); return; }
   if(bp.cost>0){ resources.money -= bp.cost; updateResourcePanel(); if(uid && playerDocRef) await updateDoc(playerDocRef, { money:resources.money }); }
+  console.log('Adding building at', e.latlng); // Debug log
   await addDoc(collection(db,'buildings'), {
     owner: uid, type: bp.type, name: bp.name||bp.type, level: 1,
     lat: e.latlng.lat, lng: e.latlng.lng, createdAt: serverTimestamp()
