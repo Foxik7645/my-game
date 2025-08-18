@@ -84,7 +84,7 @@
     <div id="xpBar"><div class="fill"></div></div>
   </div>
   <button id="shopToggle">Магазин</button>
-  <button id="marketBtn">Рынок</button>
+ <button id="marketBtn">Рынок</button>
   <div id="authBox">
     <span id="userName"></span>
     <button id="loginBtn">Войти с Google</button>
@@ -172,7 +172,7 @@
 /* ---------- Firebase (CDN, модульный SDK) ---------- */
 import { initializeApp } from "https://www.gstatic.com/firebasejs/11.0.1/firebase-app.js";
 import { getAuth, GoogleAuthProvider, signInWithPopup, onAuthStateChanged, signOut } from "https://www.gstatic.com/firebasejs/11.0.1/firebase-auth.js";
-import { getFirestore, collection, addDoc, onSnapshot, doc, setDoc, getDoc, updateDoc, deleteDoc, serverTimestamp } from "https://www.gstatic.com/firebasejs/11.0.1/firebase-firestore.js";
+import { getFirestore, collection, addDoc, onSnapshot, doc, setDoc, getDoc, updateDoc, deleteDoc, serverTimestamp, getDocs } from "https://www.gstatic.com/firebasejs/11.0.1/firebase-firestore.js";
 /* твой конфиг */
 const firebaseConfig = {
   apiKey: "AIzaSyC-cKsUyDM2H1Hs3ouKjRjO2Vxg9QvC880",
@@ -370,7 +370,8 @@ function renderBuildingDoc(id, data){
     const marker = L.marker([b.lat, b.lng], {icon: L.icon({iconUrl, iconSize: spec.size, iconAnchor: spec.anchor})}).addTo(map);
     console.log('New marker created at:', b.lat, b.lng); // Debug log
     setMarkerHidden(marker, !isSpriteZoomVisible(map.getZoom()));
-    marker.options = { owner: b.owner, buildingId: id };
+    marker.options.owner = b.owner;
+    marker.options.buildingId = id;
     marker.currentIcon = iconUrl;
     marker.bindPopup(makePopupHtml(b));
     marker.on('click', () => {
@@ -947,6 +948,28 @@ function showToast(html, actions=[] , timeoutMs=0){
 }
 /* на всякий случай — подсветить ошибки вместо «мертвых» кнопок */
 window.addEventListener('error', e=> showToast('JS error: '+e.message,[],4000));
+window.clearAllMyBuildings = async function() {
+  if (!uid) {
+    showToast('Ошибка: пользователь не авторизован.', [], 2500);
+    return;
+  }
+  try {
+    const querySnapshot = await getDocs(collection(db, 'buildings'));
+    const deletePromises = [];
+    querySnapshot.forEach(doc => {
+      if (doc.data().owner === uid) {
+        deletePromises.push(deleteDoc(doc.ref));
+        unrenderBuildingDoc(doc.id);
+      }
+    });
+    await Promise.all(deletePromises);
+    showToast('Все ваши здания удалены!', [], 1500);
+    console.log('All user buildings cleared.');
+  } catch (e) {
+    console.error('Error clearing buildings:', e);
+    showToast('Ошибка при удалении зданий: ' + e.message, [], 2500);
+  }
+};
 </script>
 </body>
 </html>
