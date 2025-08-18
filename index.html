@@ -367,12 +367,14 @@ function renderBuildingDoc(id, data){
   if(!existed){
     const spec = iconSpecForType(b.type, b.level||1);
     const iconUrl = iconUrlForType(b.type);
-    const marker=L.marker([b.lat,b.lng],{icon:L.icon({iconUrl, iconSize:spec.size, iconAnchor:spec.anchor})}).addTo(map);
+    const marker = L.marker([b.lat, b.lng], {icon: L.icon({iconUrl, iconSize: spec.size, iconAnchor: spec.anchor})}).addTo(map);
+    console.log('New marker created at:', b.lat, b.lng); // Debug log
     setMarkerHidden(marker, !isSpriteZoomVisible(map.getZoom()));
-    marker.options.owner=b.owner; marker.options.buildingId=id; marker.currentIcon=iconUrl;
+    marker.options = { owner: b.owner, buildingId: id };
+    marker.currentIcon = iconUrl;
     marker.bindPopup(makePopupHtml(b));
-    marker.on('click', ()=>{
-      const el=marker.getElement();
+    marker.on('click', () => {
+      const el = marker.getElement();
       if(selectedMarkers.has(marker)){
         marker.setOpacity(1); selectedMarkers.delete(marker); el?.classList.remove('marker-selected');
       } else if(b.owner===uid){
@@ -422,44 +424,74 @@ function unrenderBuildingDoc(id){
 let buildingsUnsub = null;
 let playerUnsub = null;
 function startRealtime(){
+  if (!uid) {
+    console.error('Cannot startRealtime: uid is null');
+    showToast('Ошибка: пользователь не авторизован.', [], 2500);
+    return;
+  }
   playerDocRef = doc(db, 'players', uid);
-  playerUnsub = onSnapshot(playerDocRef, snap=>{
+  playerUnsub = onSnapshot(playerDocRef, snap => {
     if(snap.exists()){
       const d = snap.data();
+      console.log('Player data updated:', d); // Debug log
       resources.money = d.money ?? 100;
       resources.wood = d.wood ?? 10;
       resources.stone = d.stone ?? 0;
       resources.corn = d.corn ?? 0;
       level = d.level ?? 1;
       xp = d.xp ?? 0;
-      updateResourcePanel(); addXP(0);
+      updateResourcePanel();
+      addXP(0);
+    } else {
+      console.warn('Player document does not exist, creating...');
+      ensurePlayerDoc();
     }
+  }, error => {
+    console.error('Player snapshot error:', error);
+    showToast('Ошибка получения данных игрока: ' + error.message, [], 2500);
   });
-  buildingsUnsub = onSnapshot(collection(db,'buildings'), snap=>{
-    snap.docChanges().forEach(ch=>{
-      console.log('Firestore change:', ch.type, ch.doc.id); // Debug log
-      if(ch.type==='added' || ch.type==='modified') renderBuildingDoc(ch.doc.id, ch.doc.data());
-      if(ch.type==='removed') unrenderBuildingDoc(ch.doc.id);
+  buildingsUnsub = onSnapshot(collection(db, 'buildings'), snap => {
+    console.log('Buildings snapshot received, changes:', snap.docChanges().length); // Debug log
+    snap.docChanges().forEach(ch => {
+      console.log('Firestore change:', ch.type, ch.doc.id, ch.doc.data()); // Debug log
+      if(ch.type === 'added' || ch.type === 'modified') renderBuildingDoc(ch.doc.id, ch.doc.data());
+      if(ch.type === 'removed') unrenderBuildingDoc(ch.doc.id);
     });
+  }, error => {
+    console.error('Buildings snapshot error:', error);
+    showToast('Ошибка получения данных зданий: ' + error.message, [], 2500);
   });
 }
 async function ensurePlayerDoc(){
-  const s = await getDoc(playerDocRef);
-  if(!s.exists()){
-    await setDoc(playerDocRef, {
-      money: 100, wood: 10, stone: 0, corn: 0,
-      level: 1, xp: 0, createdAt: serverTimestamp()
-    });
+  if (!uid || !playerDocRef) {
+    console.error('Cannot ensurePlayerDoc: uid or playerDocRef is null');
+    showToast('Ошибка: пользователь не авторизован.', [], 2500);
+    return;
+  }
+  try {
+    const s = await getDoc(playerDocRef);
+    if(!s.exists()){
+      console.log('Creating new player document for uid:', uid); // Debug log
+      await setDoc(playerDocRef, {
+        money: 100, wood: 10, stone: 0, corn: 0,
+        level: 1, xp: 0, createdAt: serverTimestamp()
+      });
+    }
+  } catch (e) {
+    console.error('Error in ensurePlayerDoc:', e);
+    showToast('Ошибка создания профиля игрока: ' + e.message, [], 2500);
   }
 }
 /* ---------- auth state ---------- */
-onAuthStateChanged(auth, async user=>{
+onAuthStateChanged(auth, async user => {
+  console.log('Auth state changed:', user ? user.uid : 'null'); // Debug log
   if(user){
     uid = user.uid;
     userName.textContent = user.displayName || user.email || 'Player';
-    loginBtn.style.display='inline-block'; // оставим, но серым не будет
+    loginBtn.style.display='inline-block';
     loginBtn.textContent = 'Сменить аккаунт';
     logoutBtn.style.display='inline-block';
+    playerDocRef = doc(db, 'players', uid);
     await ensurePlayerDoc();
     startRealtime();
   } else {
@@ -467,9 +499,17 @@ onAuthStateChanged(auth, async user=>{
     userName.textContent = '';
     loginBtn.textContent = 'Войти с Google';
     logoutBtn.style.display='none';
-    buildingsUnsub?.(); playerUnsub?.();
+    buildingsUnsub?.();
+    playerUnsub?.();
     buildingsUnsub = playerUnsub = null;
+    markers.clear();
+    buildingData.clear();
+    if(baseZone) { baseZone.remove(); baseZone = null; }
+    baseMarker = null;
   }
+}, error => {
+  console.error('Auth state error:', error);
+  showToast('Ошибка аутентификации: ' + error.message, [], 2500);
 });
 /* ====== ресурсы на карте (декоративные) ====== */
 const TREE_ICONS = [
@@ -640,7 +680,9 @@ function updateHarvestUI(workerMarker){
   const w = workerMarker.worker;
   const elapsed = performance.now() - w.harvest.startTs;
   const progress = Math.min(1, elapsed / w.harvest.durationMs);
-  w.harvest.ui.bar.style.width = (progress * 100) + '%';
+  if(w.harvest.ui && w.harvest.ui.bar) {
+    w.harvest.ui.bar.style.width = (progress * 100) + '%';
+  }
   if(elapsed >= w.harvest.durationMs){
     completeHarvest(workerMarker, (w.type==='wood')?trees:(w.type==='miner')?rocks:corn);
   }
@@ -790,25 +832,49 @@ map.on('click', async e=>{
   const bp = placementMode.blueprint;
   if(bp.type!=='base' && !pointInsideBase(e.latlng)){ showToast('Строить можно только в зоне вашей базы.',[],1800); return; }
   if(bp.cost>0){ resources.money -= bp.cost; updateResourcePanel(); if(uid && playerDocRef) await updateDoc(playerDocRef, { money:resources.money }); }
-  console.log('Adding building at', e.latlng); // Debug log
-  await addDoc(collection(db,'buildings'), {
-    owner: uid, type: bp.type, name: bp.name||bp.type, level: 1,
-    lat: e.latlng.lat, lng: e.latlng.lng, createdAt: serverTimestamp()
-  });
+  console.log('Adding building at:', e.latlng, 'Type:', bp.type); // Debug log
+  try {
+    const docRef = await addDoc(collection(db,'buildings'), {
+      owner: uid, type: bp.type, name: bp.name||bp.type, level: 1,
+      lat: e.latlng.lat, lng: e.latlng.lng, createdAt: serverTimestamp()
+    });
+    console.log('Building added to Firestore with ID:', docRef.id); // Debug log
+    // Immediately render the building to avoid delay
+    renderBuildingDoc(docRef.id, {
+      owner: uid, type: bp.type, name: bp.name||bp.type, level: 1,
+      lat: e.latlng.lat, lng: e.latlng.lng
+    });
+  } catch (e) {
+    console.error('Error adding building to Firestore:', e);
+    showToast('Ошибка при добавлении здания: ' + e.message, [], 2500);
+  }
   placementMode = {active:false, blueprint:null}; removeGhost();
 });
 /* апгрейды/удаление */
 window.deleteBuilding = async function(id){
   const b = buildingData.get(id); if(!b || b.owner!==uid) return alert('Можно удалять только свои здания.');
-  await deleteDoc(doc(db,'buildings', id));
+  try {
+    await deleteDoc(doc(db,'buildings', id));
+    console.log('Building deleted:', id); // Debug log
+  } catch (e) {
+    console.error('Error deleting building:', e);
+    showToast('Ошибка при удалении здания: ' + e.message, [], 2500);
+  }
 };
 window.upgradeBuilding = async function(id){
   const b = buildingData.get(id); if(!b || b.owner!==uid) return;
   if(b.level>=4) return showToast('Макс. уровень.',[],1200);
   const cost = nextCostFor(b); if(resources.money<cost) return showToast('Недостаточно денег.',[],1200);
-  resources.money -= cost; updateResourcePanel(); if(uid && playerDocRef) await updateDoc(playerDocRef, { money:resources.money });
-  await updateDoc(doc(db,'buildings', id), { level: b.level+1 });
-  showToast('Здание улучшено!',[],1200);
+  resources.money -= cost; updateResourcePanel();
+  if(uid && playerDocRef) await updateDoc(playerDocRef, { money:resources.money });
+  try {
+    await updateDoc(doc(db,'buildings', id), { level: b.level+1 });
+    console.log('Building upgraded:', id, 'New level:', b.level+1); // Debug log
+    showToast('Здание улучшено!',[],1200);
+  } catch (e) {
+    console.error('Error upgrading building:', e);
+    showToast('Ошибка при улучшении здания: ' + e.message, [], 2500);
+  }
 };
 window.upgradeBase = async function(){
   if(!baseMarker) return;
