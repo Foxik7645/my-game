@@ -4,10 +4,8 @@
 <meta charset="UTF-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
 <title>Map Game — Firebase multiplayer</title>
-
 <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"/>
 <link href="https://fonts.googleapis.com/css2?family=Press+Start+2P&family=VT323&display=swap" rel="stylesheet">
-
 <style>
   :root{ --cream:#F5E6C8; --accent:#ffd56a; --bar:#66e089; }
   html, body {height:100%; margin:0; background:#1e1e1e; color:#eee; font-family:'Segoe UI',sans-serif;}
@@ -17,11 +15,9 @@
   button:hover {background:#666;}
   .pixel {font-family:'Press Start 2P', 'VT323', monospace;}
   .leaflet-marker-icon, .leaflet-div-icon img {image-rendering: pixelated !important;}
-
   /* auth */
   #authBox{margin-left:auto; display:flex; align-items:center; gap:8px}
   #userName{color:#bbb; font-size:14px}
-
   /* ресурсы */
   #resources {display:flex; flex-wrap:wrap; align-items:center; gap:10px; padding:6px 8px; background:#232323; border:1px solid #3a3a3a; border-radius:10px;}
   .res {display:flex; align-items:center; gap:6px; padding:4px 8px; background:#1a1a1a; border:1px solid #3a3a3a; border-radius:8px;}
@@ -31,12 +27,10 @@
   #xpText{font-variant-numeric: tabular-nums;}
   #xpBar{width:220px; height:10px; background:#111; border:1px solid #555; border-radius:999px; overflow:hidden}
   #xpBar .fill{height:100%; width:0%; background:var(--bar);}
-
   /* тосты */
   #toasts {position:fixed; right:12px; bottom:12px; display:flex; flex-direction:column; gap:8px; z-index:2500;}
   .toast {background:#2d2b2d; border:1px solid #444; border-radius:10px; padding:10px 12px; box-shadow:0 8px 24px rgba(0,0,0,.35); min-width:280px;}
   .toast .actions {margin-top:8px; display:flex; gap:8px; justify-content:flex-end;}
-
   /* выделение / прогресс */
   .marker-selected {filter: drop-shadow(0 0 6px rgba(0,255,255,.8));}
   .progress-wrap {background:rgba(0,0,0,.6); border:1px solid #777; width:64px; height:8px; border-radius:10px; overflow:hidden; transform: translate(-50%,-130%);}
@@ -44,14 +38,12 @@
   .worker {width:48px; height:48px; transform: translate(-50%, -50%);}
   .worker img {width:48px; height:48px;}
   .flip-x {transform: scaleX(-1);}
-
   /* редактор */
   #editMenu {position:fixed; top:96px; right:10px; background:#2b2b2b; padding:12px; border-radius:12px; display:none; flex-direction:column; gap:8px; z-index:2200; width:340px; box-shadow:0 8px 24px rgba(0,0,0,.35);}
   #paintCanvas {image-rendering:pixelated; border:1px solid #555; background:#000; width:480px; height:480px; align-self:center;}
   .colorPalette {display:flex; flex-wrap:wrap; gap:4px; margin-top:4px;}
   .colorTile {width:18px; height:18px; cursor:pointer; border:1px solid #555;}
   #canvasInfo {color:#aaa; font-size:12px;}
-
   /* оверлей/рынок */
   #overlay {position:fixed; inset:0; background:rgba(0,0,0,.5); display:none; z-index:2100;}
   #marketMenu{
@@ -65,7 +57,6 @@
   .tabs {display:flex; gap:8px; margin-bottom:8px;}
   .tabs button {background:#333}
   .tabs .active {background:#555}
-
   /* магазин */
   #shopPanel{position:fixed; top:88px; left:0; bottom:0; width:330px; background:#222; border-right:1px solid #3a3a3a; z-index:2150; display:none; overflow-y:auto; padding:12px; box-shadow:8px 0 20px rgba(0,0,0,.35);}
   #shopHeader{display:flex; align-items:center; justify-content:space-between; margin-bottom:10px;}
@@ -85,27 +76,21 @@
 </style>
 </head>
 <body>
-
 <div id="topbar">
   <div><b>Map Game — Firebase</b></div>
-
   <div id="resources"></div>
-
   <div id="xpWrap">
     <span id="xpText">Lv 1 • 0/500</span>
     <div id="xpBar"><div class="fill"></div></div>
   </div>
-
   <button id="shopToggle">Магазин</button>
   <button id="marketBtn">Рынок</button>
-
   <div id="authBox">
     <span id="userName"></span>
     <button id="loginBtn">Войти с Google</button>
     <button id="logoutBtn" style="display:none">Выйти</button>
   </div>
 </div>
-
 <!-- редактор -->
 <div id="editMenu">
   <h4>Редактор спрайта</h4>
@@ -117,13 +102,12 @@
     <button id="closeEditor">Закрыть</button>
   </div>
 </div>
-
 <!-- рынок -->
 <div id="overlay" style="display:none"></div>
 <div id="marketMenu" style="display:none">
   <h3>Рынок</h3>
   <div class="tabs">
-    <button id="tabWood"  class="active">🪵 Дерево</button>
+    <button id="tabWood" class="active">🪵 Дерево</button>
     <button id="tabStone">🪨 Камень</button>
     <button id="tabCorn">🌽 Кукуруза</button>
   </div>
@@ -149,35 +133,30 @@
     <button id="m-sell">Продать</button>
   </div>
 </div>
-
 <!-- магазин -->
 <aside id="shopPanel">
   <div id="shopHeader">
     <h3 class="pixel">Магазин</h3>
     <button id="shopClose">×</button>
   </div>
-
   <div class="card drov pixel" data-type="drovosekdom" data-cost="100" data-icon="./images/DrovosekDom.png" data-name="DrovosekDom">
     <div class="buybar"><span class="price">100 💰</span><button class="buyBtn">Купить</button></div>
     <div class="title">DrovosekDom</div>
     <div class="cost">Стоимость: 100</div>
     <div class="desc">Дом дровосека. Рабочие добывают дерево рядом и носят в дом.</div>
   </div>
-
   <div class="card miner pixel" data-type="minehouse" data-cost="100" data-icon="./images/Minehouse.png" data-name="Minehouse">
     <div class="buybar"><span class="price">100 💰</span><button class="buyBtn">Купить</button></div>
     <div class="title">Minehouse</div>
     <div class="cost">Стоимость: 100</div>
     <div class="desc">Дом шахтёра. Поблизости появляются камни.</div>
   </div>
-
   <div class="card base pixel" data-type="base" data-cost="0" data-icon="./images/Base.png" data-name="База">
     <div class="buybar"><span class="price">Бесплатно</span><button class="buyBtn">Поставить</button></div>
     <div class="title">База</div>
     <div class="cost">Стоимость: 0</div>
     <div class="desc">Главная точка. Даёт зону строительства (пятиугольник).</div>
   </div>
-
   <div class="card fermer pixel" data-type="fermerdom" data-cost="100" data-icon="./images/FermerDom.png" data-name="FermerDom">
     <div class="buybar"><span class="price">100 💰</span><button class="buyBtn">Купить</button></div>
     <div class="title">FermerDom</div>
@@ -185,19 +164,15 @@
     <div class="desc">Дом фермера. Рабочие собирают кукурузу рядом.</div>
   </div>
 </aside>
-
 <div id="map"></div>
 <div id="toasts"></div>
-
 <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js" defer></script>
-
 <!-- === FIREBASE + GAME LOGIC === -->
 <script type="module">
 /* ---------- Firebase (CDN, модульный SDK) ---------- */
 import { initializeApp } from "https://www.gstatic.com/firebasejs/11.0.1/firebase-app.js";
 import { getAuth, GoogleAuthProvider, signInWithPopup, onAuthStateChanged, signOut } from "https://www.gstatic.com/firebasejs/11.0.1/firebase-auth.js";
 import { getFirestore, collection, addDoc, onSnapshot, doc, setDoc, getDoc, updateDoc, deleteDoc, serverTimestamp } from "https://www.gstatic.com/firebasejs/11.0.1/firebase-firestore.js";
-
 /* твой конфиг */
 const firebaseConfig = {
   apiKey: "AIzaSyC-cKsUyDM2H1Hs3ouKjRjO2Vxg9QvC880",
@@ -208,30 +183,24 @@ const firebaseConfig = {
   appId: "1:198147414309:web:33b340d6bf6dbd3d01a2cc",
   measurementId: "G-M2TKZCT4LT"
 };
-
-const app  = initializeApp(firebaseConfig);
+const app = initializeApp(firebaseConfig);
 const auth = getAuth(app);
-const db   = getFirestore(app);
-
+const db = getFirestore(app);
 /* ---------- UI auth ---------- */
-const loginBtn  = document.getElementById('loginBtn');
+const loginBtn = document.getElementById('loginBtn');
 const logoutBtn = document.getElementById('logoutBtn');
-const userName  = document.getElementById('userName');
-
+const userName = document.getElementById('userName');
 loginBtn.onclick = async () => {
   try { await signInWithPopup(auth, new GoogleAuthProvider()); }
   catch (e) { showToast('Ошибка входа: ' + (e?.message||e), [], 2500); }
 };
 logoutBtn.onclick = async () => { try{ await signOut(auth); }catch(e){} };
-
-let uid = null;          // текущий игрок
+let uid = null; // текущий игрок
 let playerDocRef = null; // ссылка на players/{uid}
-
 /* ---------- Игровые состояния (локально) ---------- */
 const XP_PER_LEVEL = 500;
 let level = 1, xp = 0;
 const resources = { money: 100, wood: 10, stone: 0, corn: 0 };
-
 /* ---------- helpers UI ---------- */
 function updateResourcePanel(){
   document.getElementById('resources').innerHTML = `
@@ -241,7 +210,6 @@ function updateResourcePanel(){
     <div class="res">🌽 <b id="r-corn">${resources.corn}</b></div>`;
 }
 updateResourcePanel();
-
 function addXP(amount){
   xp += amount;
   while(xp >= XP_PER_LEVEL){ xp -= XP_PER_LEVEL; level++; showToast(`📈 Уровень ${level}!`,[],1500); }
@@ -250,20 +218,17 @@ function addXP(amount){
   document.querySelector('#xpBar .fill').style.width = p + '%';
 }
 addXP(0);
-
 /* ---------- карта ---------- */
 await new Promise(r => { if (window.L) r(); else window.addEventListener('load', r, {once:true}); });
-const map = L.map('map').setView([55.751244,37.618423], 5);
+const map = L.map('map').setView([55.751244,37.618423], 13);
 L.tileLayer('https://cartodb-basemaps-a.global.ssl.fastly.net/dark_nolabels/{z}/{x}/{y}{r}.png',
   { attribution: '©OpenStreetMap ©Carto', subdomains: 'abcd', maxZoom: 19 }).addTo(map);
-
 function metersToLat(m){ return m/111000; }
 function metersToLng(m, lat){ return m/(111000*Math.cos(lat*Math.PI/180)); }
-
 /* видимость по зуму */
 const SPRITES_Z_MIN = 0;
-function isSpriteZoomVisible(){ return true; }
-function setMarkerHidden(m){ /* no-op */ }
+function isSpriteZoomVisible(z){ return z >= SPRITES_Z_MIN; }
+function setMarkerHidden(m, hidden){
   const el = m?.getElement?.();
   if(el){ el.classList.toggle('is-hidden', hidden); }
   if(hidden && m?.isPopupOpen && m.isPopupOpen()) m.closePopup();
@@ -276,32 +241,27 @@ map.on('zoomend', ()=>{
   corn.forEach(c=>setMarkerHidden(c.marker, hidden));
   if(ghostMarker) setMarkerHidden(ghostMarker, hidden);
 });
-
 /* ---------- здания/объекты ---------- */
-const markers=new Map();          // id -> L.marker
-const buildingData=new Map();     // id -> {type, owner, name, level}
+const markers=new Map(); // id -> L.marker
+const buildingData=new Map(); // id -> {type, owner, name, level}
 const selectedMarkers=new Set();
-
 let baseMarker=null, baseZone=null;
 let baseMeta={ level:0, color:'#00ffcc', paintSize:32, poly:{angles:[], radii:[]} };
-
 const BASE_LEVELS = {
-  1: { radius: 150, icon: 120, cost: 0,    paint: 32  },
-  2: { radius: 220, icon: 148, cost: 200,  paint: 64  },
-  3: { radius: 300, icon: 176, cost: 500,  paint: 128 },
+  1: { radius: 150, icon: 120, cost: 0, paint: 32 },
+  2: { radius: 220, icon: 148, cost: 200, paint: 64 },
+  3: { radius: 300, icon: 176, cost: 500, paint: 128 },
   4: { radius: 380, icon: 208, cost: 1000, paint: 256 },
 };
 const DROVOSEKDOM_LEVELS = {
-  1: { icon: 96,  cost: 150,  workers: 3,  paint: 60 },
-  2: { icon: 112, cost: 350,  workers: 5,  paint: 72 },
-  3: { icon: 128, cost: 650,  workers: 9,  paint: 84 },
+  1: { icon: 96, cost: 150, workers: 3, paint: 60 },
+  2: { icon: 112, cost: 350, workers: 5, paint: 72 },
+  3: { icon: 128, cost: 650, workers: 9, paint: 84 },
   4: { icon: 144, cost: 1050, workers: 15, paint: 96 },
 };
 const MINEHOUSE_LEVELS = JSON.parse(JSON.stringify(DROVOSEKDOM_LEVELS));
 const FERMERVOM_LEVELS = JSON.parse(JSON.stringify(DROVOSEKDOM_LEVELS));
-
 function randomBrightColor(){ const h = Math.floor(Math.random()*360); return `hsl(${h} 95% 60%)`; }
-
 function makeBasePolyAround(center, radiusM){
   const start = Math.random()*Math.PI*2;
   const angles=[], radii=[];
@@ -355,28 +315,25 @@ function iconSpecForType(type, level=1){
 function iconUrlForType(type){
   if(type==='base') return './images/Base.png';
   if(type==='drovosekdom') return './images/DrovosekDom.png';
-  if(type==='minehouse')   return './images/Minehouse.png';
-  if(type==='fermerdom')   return './images/FermerDom.png';
+  if(type==='minehouse') return './images/Minehouse.png';
+  if(type==='fermerdom') return './images/FermerDom.png';
   return './images/House.png';
 }
 function nextBaseCost(){ return (baseMeta.level>=4)?null:BASE_LEVELS[baseMeta.level+1].cost; }
 function nextCostFor(b){
   if(b.type==='drovosekdom') return (b.level>=4)?null:DROVOSEKDOM_LEVELS[b.level+1].cost;
-  if(b.type==='minehouse')   return (b.level>=4)?null:MINEHOUSE_LEVELS[b.level+1].cost;
-  if(b.type==='fermerdom')   return (b.level>=4)?null:FERMERVOM_LEVELS[b.level+1].cost;
+  if(b.type==='minehouse') return (b.level>=4)?null:MINEHOUSE_LEVELS[b.level+1].cost;
+  if(b.type==='fermerdom') return (b.level>=4)?null:FERMERVOM_LEVELS[b.level+1].cost;
   return null;
 }
-
 /* наборы работников у своих домов */
 const woodcuttersByHome = new Map();
 const minersByHome = new Map();
 const farmersByHome = new Map();
-
 function makePopupHtml(b){
   const owner = b.owner ? (b.owner===uid?'(вы)':b.owner.slice(0,6)) : '';
   const name = b.name || b.type;
   const canEdit = (b.owner===uid);
-
   let workersText='';
   if(b.type==='drovosekdom'){
     const set = woodcuttersByHome.get(b.id) || new Set();
@@ -391,33 +348,26 @@ function makePopupHtml(b){
     const max = FERMERVOM_LEVELS[b.level].workers;
     workersText = `<br/>Рабочие: ${set.size}/${max}`;
   }
-
   const editBtn = canEdit ? `<button onclick="editBuilding('${b.id}')">Редактировать</button>` : '';
-  const delBtn  = canEdit ? `<button onclick="window.deleteBuilding('${b.id}')">Удалить</button>` : '';
+  const delBtn = canEdit ? `<button onclick="window.deleteBuilding('${b.id}')">Удалить</button>` : '';
   const hireWood = (canEdit && b.type==='drovosekdom') ? `<button onclick="hireWoodcutter('${b.id}')">Нанять дровосека</button>` : '';
-  const hireMiner= (canEdit && b.type==='minehouse')   ? `<button onclick="hireMiner('${b.id}')">Нанять шахтёра</button>` : '';
+  const hireMiner= (canEdit && b.type==='minehouse') ? `<button onclick="hireMiner('${b.id}')">Нанять шахтёра</button>` : '';
   const hireFermer = (canEdit && b.type==='fermerdom') ? `<button onclick="hireFermer('${b.id}')">Нанять фермера</button>` : '';
-
   const upBtn = (canEdit && b.type!=='base')
     ? `<button onclick="window.upgradeBuilding('${b.id}')">Улучшить (${nextCostFor(b)}💰)</button>` : '';
-
   const baseUp = (canEdit && b.type==='base' && nextBaseCost()!=null)
     ? `<button onclick="window.upgradeBase()">Улучшить базу (${nextBaseCost()}💰)</button>` : '';
-
   return `🏠 <b>${name}</b><br/>Тип: ${b.type}<br/>Уровень: ${b.level} ${owner?('<br/>Владелец: '+owner):''}${workersText}<br/>${editBtn} ${delBtn} ${hireWood} ${hireMiner} ${hireFermer} ${upBtn} ${baseUp}`;
 }
-
 /* добавить/обновить маркер по документу */
 function renderBuildingDoc(id, data){
   const b = { id, ...data };
   const existed = markers.has(id);
-
   if(!existed){
     const spec = iconSpecForType(b.type, b.level||1);
     const iconUrl = iconUrlForType(b.type);
     const marker=L.marker([b.lat,b.lng],{icon:L.icon({iconUrl, iconSize:spec.size, iconAnchor:spec.anchor})}).addTo(map);
     setMarkerHidden(marker, !isSpriteZoomVisible(map.getZoom()));
-
     marker.options.owner=b.owner; marker.options.buildingId=id; marker.currentIcon=iconUrl;
     marker.bindPopup(makePopupHtml(b));
     marker.on('click', ()=>{
@@ -430,10 +380,9 @@ function renderBuildingDoc(id, data){
     });
     markers.set(id, marker);
     buildingData.set(id, b);
-
     if(b.type==='drovosekdom' && b.owner===uid && !woodcuttersByHome.has(id)) woodcuttersByHome.set(id, new Set());
-    if(b.type==='minehouse'   && b.owner===uid && !minersByHome.has(id))     minersByHome.set(id, new Set());
-    if(b.type==='fermerdom'   && b.owner===uid && !farmersByHome.has(id))    farmersByHome.set(id, new Set());
+    if(b.type==='minehouse' && b.owner===uid && !minersByHome.has(id)) minersByHome.set(id, new Set());
+    if(b.type==='fermerdom' && b.owner===uid && !farmersByHome.has(id)) farmersByHome.set(id, new Set());
   } else {
     const marker = markers.get(id);
     const prev = buildingData.get(id);
@@ -444,7 +393,6 @@ function renderBuildingDoc(id, data){
       marker.setIcon(L.icon({iconUrl: marker.currentIcon||iconUrlForType(b.type), iconSize:spec.size, iconAnchor:spec.anchor}));
     }
   }
-
   if(b.type==='base' && b.owner===uid){
     baseMarker = markers.get(id);
     if(!baseMeta.level){
@@ -463,32 +411,28 @@ function unrenderBuildingDoc(id){
   map.removeLayer(marker);
   markers.delete(id);
   buildingData.delete(id);
-
   if(b?.type==='base' && b.owner===uid){
     if(baseZone){ baseZone.remove(); baseZone=null; }
     baseMarker=null; baseMeta={ level:0, color:randomBrightColor(), paintSize:32, poly:{angles:[],radii:[]} };
   }
 }
-
 /* ---------- Firestore listeners ---------- */
 let buildingsUnsub = null;
 let playerUnsub = null;
-
 function startRealtime(){
   playerDocRef = doc(db, 'players', uid);
   playerUnsub = onSnapshot(playerDocRef, snap=>{
     if(snap.exists()){
       const d = snap.data();
       resources.money = d.money ?? 100;
-      resources.wood  = d.wood  ?? 10;
+      resources.wood = d.wood ?? 10;
       resources.stone = d.stone ?? 0;
-      resources.corn  = d.corn  ?? 0;
+      resources.corn = d.corn ?? 0;
       level = d.level ?? 1;
-      xp    = d.xp    ?? 0;
+      xp = d.xp ?? 0;
       updateResourcePanel(); addXP(0);
     }
   });
-
   buildingsUnsub = onSnapshot(collection(db,'buildings'), snap=>{
     snap.docChanges().forEach(ch=>{
       if(ch.type==='added' || ch.type==='modified') renderBuildingDoc(ch.doc.id, ch.doc.data());
@@ -505,7 +449,6 @@ async function ensurePlayerDoc(){
     });
   }
 }
-
 /* ---------- auth state ---------- */
 onAuthStateChanged(auth, async user=>{
   if(user){
@@ -525,7 +468,6 @@ onAuthStateChanged(auth, async user=>{
     buildingsUnsub = playerUnsub = null;
   }
 });
-
 /* ====== ресурсы на карте (декоративные) ====== */
 const TREE_ICONS = [
   new L.Icon({iconUrl:'./images/Tree1.png', iconSize:[48,48], iconAnchor:[24,36]}),
@@ -534,23 +476,20 @@ const TREE_ICONS = [
 ];
 const trees = new Map();
 const TREE_CAP = 50, TREE_SPAWN_INTERVAL_MS = 60_000, TREE_RADIUS_MAX_M = 100, TREE_RADIUS_MIN_M = 20;
-
 const ROCK_ICONS = [
-  new L.Icon({iconUrl:'./images/Kamen.png',  iconSize:[48,48], iconAnchor:[24,36]}),
+  new L.Icon({iconUrl:'./images/Kamen.png', iconSize:[48,48], iconAnchor:[24,36]}),
   new L.Icon({iconUrl:'./images/Kamen2.png', iconSize:[48,48], iconAnchor:[24,36]}),
   new L.Icon({iconUrl:'./images/Kamen3.png', iconSize:[48,48], iconAnchor:[24,36]}),
 ];
 const rocks = new Map();
 const ROCK_CAP = 50, ROCK_SPAWN_INTERVAL_MS = 60_000, ROCK_RADIUS_MAX_M = 100, ROCK_RADIUS_MIN_M = 20;
-
 const CORN_ICONS = [
-  new L.Icon({iconUrl:'./images/Corn.png',  iconSize:[48,48], iconAnchor:[24,36]}),
+  new L.Icon({iconUrl:'./images/Corn.png', iconSize:[48,48], iconAnchor:[24,36]}),
   new L.Icon({iconUrl:'./images/Corn2.png', iconSize:[48,48], iconAnchor:[24,36]}),
   new L.Icon({iconUrl:'./images/Corn3.png', iconSize:[48,48], iconAnchor:[24,36]}),
 ];
 const corn = new Map();
 const CORN_CAP = 50, CORN_SPAWN_INTERVAL_MS = 60_000, CORN_RADIUS_MAX_M = 100, CORN_RADIUS_MIN_M = 20;
-
 function randBetween(a,b){ return a + Math.random()*(b-a); }
 function pickPointNear(latlng, maxM, minM){
   const r = randBetween(minM, maxM);
@@ -601,14 +540,12 @@ function spawnCornBatch(){
     corn.set(id, {id, marker:m, lat:pt.lat, lng:pt.lng});
   }
 }
-
 /* ====== рабочие ====== */
-const WC_FRAMES   = ['./images/Drovosek1.png','./images/Drovosek2.png','./images/Drovosek3.png','./images/Drovosek4.png'];
+const WC_FRAMES = ['./images/Drovosek1.png','./images/Drovosek2.png','./images/Drovosek3.png','./images/Drovosek4.png'];
 const MINER_FRAMES= ['./images/Miner1.png','./images/Miner2.png','./images/Miner3.png','./images/Miner4.png'];
 const FERM_FRAMES = ['./images/ferma1.png','./images/ferma2.png','./images/ferma3.png','./images/ferma4.png'];
 const IDLE_INDEX = 1, FRAME_INTERVAL_MS = 160;
 const STEP_SPEED = 0.0009, ARRIVE_EPS = 0.00008;
-
 function makeWorkerDiv(frameUrl, flipped){
   const html = `<div class="worker"><img src="${frameUrl}" class="${flipped?'flip-x':''}" draggable="false"/></div>`;
   return L.divIcon({ html, className:'', iconSize:[48,48], iconAnchor:[24,24] });
@@ -713,7 +650,6 @@ function moveWorkers(){
         if(!pool.has(w.harvest.targetId)){ w.state='wander'; w.target = pickWanderPointAround(homePos); }
       }
       if(w.state==='harvest') updateHarvestUI(marker);
-
       let target; if(w.state==='wander' || w.state==='toTarget') target=w.target; else if(w.state==='harvest') target=pos; else target=homePos;
       if(w.state!=='harvest'){
         const dLat=target.lat-pos.lat, dLng=target.lng-pos.lng;
@@ -742,41 +678,36 @@ function moveWorkers(){
   farmersByHome.forEach((set,homeId)=>updateSet(set,homeId,'fermer'));
   requestAnimationFrame(moveWorkers);
 }
-
 /* ===== рынок (с кукурузой 10->150) + сохранение денег ===== */
 const overlay = document.getElementById('overlay');
 const marketMenu = document.getElementById('marketMenu');
 const marketBtn = document.getElementById('marketBtn');
-const tabWood  = document.getElementById('tabWood');
+const tabWood = document.getElementById('tabWood');
 const tabStone = document.getElementById('tabStone');
-const tabCorn  = document.getElementById('tabCorn');
+const tabCorn = document.getElementById('tabCorn');
 const mRate = document.getElementById('m-rate');
 const mHave = document.getElementById('m-have');
 const mPacks= document.getElementById('m-packs');
-const mGet  = document.getElementById('m-get');
-const mDec  = document.getElementById('m-dec');
-const mInc  = document.getElementById('m-inc');
-const mMax  = document.getElementById('m-max');
+const mGet = document.getElementById('m-get');
+const mDec = document.getElementById('m-dec');
+const mInc = document.getElementById('m-inc');
+const mMax = document.getElementById('m-max');
 const mSell = document.getElementById('m-sell');
 const mCancel=document.getElementById('m-cancel');
-
 const WOOD_PER_PACK = 10, WOOD_PRICE = 50;
 const STONE_PER_PACK = 10, STONE_PRICE = 150;
-const CORN_PER_PACK  = 10, CORN_PRICE  = 150;
+const CORN_PER_PACK = 10, CORN_PRICE = 150;
 let marketResource = 'wood';
-
 function openMarket(){ overlay.style.display='block'; marketMenu.style.display='block'; setMarketResource(marketResource); updateMarketUI(0,true); }
 function closeMarket(){ overlay.style.display='none'; marketMenu.style.display='none'; }
-
 marketBtn.onclick = openMarket;
 overlay.onclick = closeMarket; mCancel.onclick = closeMarket;
-
 function setMarketResource(res){
   marketResource = res;
   tabWood.classList.toggle('active', res==='wood');
   tabStone.classList.toggle('active', res==='stone');
   tabCorn.classList.toggle('active', res==='corn');
-  if(res==='wood'){ mRate.textContent = '10 🪵 = 50 💰';  mHave.textContent = resources.wood; }
+  if(res==='wood'){ mRate.textContent = '10 🪵 = 50 💰'; mHave.textContent = resources.wood; }
   else if(res==='stone'){ mRate.textContent = '10 🪨 = 150 💰'; mHave.textContent = resources.stone; }
   else { mRate.textContent = '10 🌽 = 150 💰'; mHave.textContent = resources.corn; }
   updateMarketUI(0,true);
@@ -784,7 +715,6 @@ function setMarketResource(res){
 tabWood.onclick = ()=>setMarketResource('wood');
 tabStone.onclick= ()=>setMarketResource('stone');
 tabCorn.onclick = ()=>setMarketResource('corn');
-
 function maxPacks(){ return marketResource==='wood'?Math.floor(resources.wood/WOOD_PER_PACK):marketResource==='stone'?Math.floor(resources.stone/STONE_PER_PACK):Math.floor(resources.corn/CORN_PER_PACK); }
 function priceFor(packs){ return marketResource==='wood'?packs*WOOD_PRICE:marketResource==='stone'?packs*STONE_PRICE:packs*CORN_PRICE; }
 function updateMarketUI(packs, clamp=false){ const mx=maxPacks(); if(clamp) packs=Math.max(0, Math.min(mx, packs)); mHave.textContent = marketResource==='wood'?resources.wood:marketResource==='stone'?resources.stone:resources.corn; mPacks.textContent=packs; mPacks.dataset.value=packs; mGet.textContent=priceFor(packs); }
@@ -801,18 +731,16 @@ mSell.onclick = async ()=>{
   if(uid && playerDocRef) await updateDoc(playerDocRef, { money:resources.money, wood:resources.wood, stone:resources.stone, corn:resources.corn });
   showToast('Сделка совершена!',[],1200);
 };
-
 /* ===== магазин/размещение — запись в Firestore ===== */
 const shopPanel = document.getElementById('shopPanel');
 document.getElementById('shopToggle').onclick = ()=> shopPanel.style.display = (shopPanel.style.display==='block'?'none':'block');
-document.getElementById('shopClose').onclick  = ()=> shopPanel.style.display = 'none';
+document.getElementById('shopClose').onclick = ()=> shopPanel.style.display = 'none';
 shopPanel.querySelectorAll('.card').forEach(card=>{
   card.addEventListener('click', (e)=>{
     shopPanel.querySelectorAll('.card').forEach(c=>{ if(c!==card) c.classList.remove('active'); });
     card.classList.toggle('active'); e.stopPropagation();
   });
 });
-
 let placementMode = { active:false, blueprint:null }, ghostMarker=null, ghostFollow=null;
 function makeGhostForBlueprint(bp){
   removeGhost();
@@ -856,7 +784,6 @@ map.on('click', async e=>{
   });
   placementMode = {active:false, blueprint:null}; removeGhost();
 });
-
 /* апгрейды/удаление */
 window.deleteBuilding = async function(id){
   const b = buildingData.get(id); if(!b || b.owner!==uid) return alert('Можно удалять только свои здания.');
@@ -879,7 +806,6 @@ window.upgradeBase = async function(){
   resources.money -= cost; updateResourcePanel(); applyBaseZone();
   if(uid && playerDocRef) await updateDoc(playerDocRef, { money:resources.money });
 };
-
 /* ===== горячие клавиши ===== */
 document.addEventListener('keydown', e=>{
   if(e.key==='Delete'){
@@ -887,7 +813,6 @@ document.addEventListener('keydown', e=>{
     selectedMarkers.clear();
   }
 });
-
 /* ===== редактор спрайта ===== */
 const editMenu=document.getElementById('editMenu');
 const canvas=document.getElementById('paintCanvas');
@@ -925,14 +850,12 @@ document.getElementById('saveSprite').onclick=()=>{
   editMenu.style.display='none'; editingMarker=null;
 };
 closeEditorBtn.onclick=()=>{ editMenu.style.display='none'; editingMarker=null; };
-
 /* ===== init ===== */
 spawnTreesBatch(); spawnRocksBatch(); spawnCornBatch();
 setInterval(spawnTreesBatch, TREE_SPAWN_INTERVAL_MS);
 setInterval(spawnRocksBatch, ROCK_SPAWN_INTERVAL_MS);
-setInterval(spawnCornBatch,  CORN_SPAWN_INTERVAL_MS);
+setInterval(spawnCornBatch, CORN_SPAWN_INTERVAL_MS);
 requestAnimationFrame(moveWorkers);
-
 /* ===== тосты ===== */
 const toasts=document.getElementById('toasts');
 function showToast(html, actions=[] , timeoutMs=0){
@@ -943,7 +866,6 @@ function showToast(html, actions=[] , timeoutMs=0){
   }
   toasts.appendChild(t); if(timeoutMs>0){ setTimeout(()=>{ if(t.parentNode) toasts.removeChild(t); }, timeoutMs); }
 }
-
 /* на всякий случай — подсветить ошибки вместо «мертвых» кнопок */
 window.addEventListener('error', e=> showToast('JS error: '+e.message,[],4000));
 </script>
