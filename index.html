@@ -641,7 +641,7 @@ function createWorker(homeId, type){
   const homePos = homeMarker.getLatLng();
   const startAng=Math.random()*2*Math.PI, startR=randBetween(10,25);
   const lat=homePos.lat + metersToLat(startR)*Math.sin(startAng);
-  const lng=homePos.lng + metersToLng(startR*Math.cos(ang), homePos.lat);
+  const lng=homePos.lng + metersToLng(startR*Math.cos(startAng), homePos.lat);
   const frames = (type==='wood')?WC_FRAMES:(type==='miner')?MINER_FRAMES:FERM_FRAMES;
   const m=L.marker([lat,lng],{icon: makeWorkerDiv(frames[IDLE_INDEX], false)}).addTo(map);
   setMarkerHidden(m, !isSpriteZoomVisible(map.getZoom()));
