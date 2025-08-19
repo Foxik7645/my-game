@@ -65,6 +65,7 @@
   .card.miner {background:url('./images/CardMiner.png') center/cover no-repeat;}
   .card.base {background:url('./images/CardBase.png') center/cover no-repeat;}
   .card.fermer {background:url('./images/Cardeda.png') center/cover no-repeat;}
+  .card.houseeat {background:url('./images/CardHouseEat.png') center/cover no-repeat;}
   .card .title{position:absolute; top:18px; left:84px; right:16px; font-size:13px; color:var(--cream); text-shadow:0 1px 0 #000;}
   .card .cost {position:absolute; top:46px; left:84px; right:16px; font-size:12px; color:var(--cream); text-shadow:0 1px 0 #000;}
   .card .desc {position:absolute; left:30px; right:30px; bottom:22px; font-size:12px; line-height:1.25; color:var(--cream); text-shadow:0 1px 0 #000;}
@@ -164,6 +165,12 @@
     <div class="cost">Стоимость: 100</div>
     <div class="desc">Дом фермера. Рабочие собирают кукурузу рядом.</div>
   </div>
+  <div class="card houseeat pixel" data-type="houseeat" data-cost="0" data-icon="./images/HouseEat.png" data-name="HouseEat">
+    <div class="buybar"><span class="price">Бесплатно</span><button class="buyBtn">Поставить</button></div>
+    <div class="title">HouseEat</div>
+    <div class="cost">Стоимость: 0</div>
+    <div class="desc">Завод по производству еды. Производит порции для найма рабочих.</div>
+  </div>
 </aside>
 <div id="map"></div>
 <div id="toasts"></div>
@@ -173,7 +180,7 @@
 /* ---------- Firebase (CDN, модульный SDK) ---------- */
 import { initializeApp } from "https://www.gstatic.com/firebasejs/11.0.1/firebase-app.js";
 import { getAuth, GoogleAuthProvider, signInWithPopup, onAuthStateChanged, signOut } from "https://www.gstatic.com/firebasejs/11.0.1/firebase-auth.js";
-import { getFirestore, collection, addDoc, onSnapshot, doc, setDoc, getDoc, updateDoc, deleteDoc, serverTimestamp, getDocs } from "https://www.gstatic.com/firebasejs/11.0.1/firebase-firestore.js";
+import { getFirestore, collection, addDoc, onSnapshot, doc, setDoc, getDoc, updateDoc, deleteDoc, serverTimestamp, getDocs, arrayUnion, arrayRemove } from "https://www.gstatic.com/firebasejs/11.0.1/firebase-firestore.js";
 /* твой конфиг */
 const firebaseConfig = {
   apiKey: "AIzaSyC-cKsUyDM2H1Hs3ouKjRjO2Vxg9QvC880",
@@ -201,14 +208,15 @@ let playerDocRef = null; // ссылка на players/{uid}
 /* ---------- Игровые состояния (локально) ---------- */
 const BASE_XP = 500;
 let level = 1, xp = 0;
-const resources = { money: 100, wood: 10, stone: 0, corn: 0 };
+const resources = { money: 100, wood: 10, stone: 0, corn: 0, food: 0 };
 /* ---------- helpers UI ---------- */
 function updateResourcePanel(){
   document.getElementById('resources').innerHTML = `
     <div class="res">💰 <b id="r-money">${resources.money}</b></div>
     <div class="res">🪵 <b id="r-wood">${resources.wood}</b></div>
     <div class="res">🪨 <b id="r-stone">${resources.stone}</b></div>
-    <div class="res">🌽 <b id="r-corn">${resources.corn}</b></div>`;
+    <div class="res">🌽 <b id="r-corn">${resources.corn}</b></div>
+    <div class="res">🍔 <b id="r-food">${resources.food}</b></div>`;
 }
 updateResourcePanel();
 function getRequiredXp(currentLevel) {
@@ -247,6 +255,7 @@ function setMarkerHidden(m, hidden){
 map.on('zoomend', ()=>{
   const hidden = !isSpriteZoomVisible(map.getZoom());
   [...markers.values()].forEach(m=>setMarkerHidden(m, hidden));
+  [...markers.values()].forEach(m=> { if (m.worker) setMarkerHidden(m, hidden); });
   trees.forEach(t=>setMarkerHidden(t.marker, hidden));
   rocks.forEach(r=>setMarkerHidden(r.marker, hidden));
   corn.forEach(c=>setMarkerHidden(c.marker, hidden));
@@ -273,6 +282,12 @@ const DROVOSEKDOM_LEVELS = {
 };
 const MINEHOUSE_LEVELS = JSON.parse(JSON.stringify(DROVOSEKDOM_LEVELS));
 const FERMERVOM_LEVELS = JSON.parse(JSON.stringify(DROVOSEKDOM_LEVELS));
+const HOUSEEAT_LEVELS = {
+  1: { icon: 96, cost: 150, cookTime: 60000, portions: 10, paint: 60 },
+  2: { icon: 112, cost: 350, cookTime: 45000, portions: 12, paint: 72 },
+  3: { icon: 128, cost: 650, cookTime: 30000, portions: 15, paint: 84 },
+  4: { icon: 144, cost: 1050, cookTime: 15000, portions: 20, paint: 96 },
+};
 function randomBrightColor(){ const h = Math.floor(Math.random()*360); return `hsl(${h} 95% 60%)`; }
 function makeBasePolyAround(center, radiusM){
   const start = Math.random()*Math.PI*2;
@@ -329,6 +344,9 @@ function iconSpecForType(type, level=1){
   if(type==='base'){
     const lvl = BASE_LEVELS[baseMeta.level||1] || BASE_LEVELS[1];
     return {size:[lvl.icon,lvl.icon], anchor:[lvl.icon/2,lvl.icon/2]};
+  } else if (type==='houseeat'){
+    const lvl = HOUSEEAT_LEVELS[level] || HOUSEEAT_LEVELS[1];
+    return {size:[lvl.icon,lvl.icon], anchor:[lvl.icon/2,lvl.icon/2]};
   }
   const table = type==='drovosekdom'?DROVOSEKDOM_LEVELS: type==='minehouse'?MINEHOUSE_LEVELS: FERMERVOM_LEVELS;
   const lvl = table[level] || table[1];
@@ -339,6 +357,7 @@ function iconUrlForType(type){
   if(type==='drovosekdom') return './images/DrovosekDom.png';
   if(type==='minehouse') return './images/Minehouse.png';
   if(type==='fermerdom') return './images/FermerDom.png';
+  if(type==='houseeat') return './images/HouseEat.png';
   return './images/House.png';
 }
 function nextBaseCost(){ return (baseMeta.level>=4)?null:BASE_LEVELS[baseMeta.level+1].cost; }
@@ -346,12 +365,14 @@ function nextCostFor(b){
   if(b.type==='drovosekdom') return (b.level>=4)?null:DROVOSEKDOM_LEVELS[b.level+1].cost;
   if(b.type==='minehouse') return (b.level>=4)?null:MINEHOUSE_LEVELS[b.level+1].cost;
   if(b.type==='fermerdom') return (b.level>=4)?null:FERMERVOM_LEVELS[b.level+1].cost;
+  if(b.type==='houseeat') return (b.level>=4)?null:HOUSEEAT_LEVELS[b.level+1].cost;
   return null;
 }
 /* наборы работников у своих домов */
 const woodcuttersByHome = new Map();
 const minersByHome = new Map();
 const farmersByHome = new Map();
+const cookingByHome = new Map(); // id -> {startTs, duration, ui}
 function getTotalWorkers(type) {
   let total = 0;
   const homes = (type === 'drovosekdom') ? woodcuttersByHome : (type === 'minehouse') ? minersByHome : farmersByHome;
@@ -370,40 +391,44 @@ function makePopupHtml(b){
   const name = b.name || b.type;
   const canEdit = (b.owner===uid);
   let workersText='';
+  let hireBtn = '';
+  let cookBtn = '';
   if(b.type==='drovosekdom'){
     const set = woodcuttersByHome.get(b.id) || new Set();
     const max = DROVOSEKDOM_LEVELS[b.level].workers;
     workersText = `<br/>Рабочие: ${set.size}/${max}`;
+    hireBtn = (canEdit) ? `<button onclick="hireWoodcutter('${b.id}')">Нанять дровосека (2🍔)</button>` : '';
   } else if(b.type==='minehouse'){
     const set = minersByHome.get(b.id) || new Set();
     const max = MINEHOUSE_LEVELS[b.level].workers;
     workersText = `<br/>Рабочие: ${set.size}/${max}`;
+    hireBtn = (canEdit) ? `<button onclick="hireMiner('${b.id}')">Нанять шахтёра (2🍔)</button>` : '';
   } else if(b.type==='fermerdom'){
     const set = farmersByHome.get(b.id) || new Set();
     const max = FERMERVOM_LEVELS[b.level].workers;
     workersText = `<br/>Рабочие: ${set.size}/${max}`;
+    hireBtn = (canEdit) ? `<button onclick="hireFermer('${b.id}')">Нанять фермера (2🍔)</button>` : '';
+  } else if(b.type==='houseeat'){
+    const portions = HOUSEEAT_LEVELS[b.level].portions;
+    cookBtn = (canEdit && !b.cooking) ? `<button onclick="cookFood('${b.id}')">Приготовить еду (5🌽 +50💰 =${portions}🍔)</button>` : '';
+    if (b.cooking) workersText = '<br/>Готовка в процессе...';
   }
   const editBtn = canEdit ? `<button onclick="editBuilding('${b.id}')">Редактировать</button>` : '';
   const delBtn = canEdit ? `<button onclick="window.deleteBuilding('${b.id}')">Удалить</button>` : '';
-  const hireWood = (canEdit && b.type==='drovosekdom') ? `<button onclick="hireWoodcutter('${b.id}')">Нанять дровосека</button>` : '';
-  const hireMiner= (canEdit && b.type==='minehouse') ? `<button onclick="hireMiner('${b.id}')">Нанять шахтёра</button>` : '';
-  const hireFermer = (canEdit && b.type==='fermerdom') ? `<button onclick="hireFermer('${b.id}')">Нанять фермера</button>` : '';
   const upBtn = (canEdit && b.type!=='base')
     ? `<button onclick="window.upgradeBuilding('${b.id}')">Улучшить (${nextCostFor(b)}💰)</button>` : '';
   const baseUp = (canEdit && b.type==='base' && nextBaseCost()!=null)
     ? `<button onclick="window.upgradeBase()">Улучшить базу (${nextBaseCost()}💰)</button>` : '';
-  return `🏠 <b>${name}</b><br/>Тип: ${b.type}<br/>Уровень: ${b.level} ${owner?('<br/>Владелец: '+owner):''}${workersText}<br/>${editBtn} ${delBtn} ${hireWood} ${hireMiner} ${hireFermer} ${upBtn} ${baseUp}`;
+  return `🏠 <b>${name}</b><br/>Тип: ${b.type}<br/>Уровень: ${b.level} ${owner?('<br/>Владелец: '+owner):''}${workersText}<br/>${editBtn} ${delBtn} ${hireBtn} ${cookBtn} ${upBtn} ${baseUp}`;
 }
 /* добавить/обновить маркер по документу */
 function renderBuildingDoc(id, data){
-  console.log('Rendering building:', id, data); // Debug log
   const b = { id, ...data };
   const existed = markers.has(id);
   if(!existed){
     const spec = iconSpecForType(b.type, b.level||1);
     const iconUrl = b.customIcon || iconUrlForType(b.type);
     const marker = L.marker([b.lat, b.lng], {icon: L.icon({iconUrl, iconSize: spec.size, iconAnchor: spec.anchor})}).addTo(map);
-    console.log('New marker created at:', b.lat, b.lng); // Debug log
     setMarkerHidden(marker, !isSpriteZoomVisible(map.getZoom()));
     marker.options.owner = b.owner;
     marker.options.buildingId = id;
@@ -432,6 +457,16 @@ function renderBuildingDoc(id, data){
       marker.setIcon(L.icon({iconUrl: marker.currentIcon|| (b.customIcon || iconUrlForType(b.type)), iconSize:spec.size, iconAnchor:spec.anchor}));
     }
   }
+  if (b.type==='houseeat' && b.owner===uid) {
+    if (b.cooking && !cookingByHome.has(id)) {
+      const ui = createProgressMarker(marker.getLatLng());
+      cookingByHome.set(id, {startTs: b.cooking.start, duration: b.cooking.duration, ui});
+    } else if (!b.cooking && cookingByHome.has(id)) {
+      const {ui} = cookingByHome.get(id);
+      if (ui) map.removeLayer(ui.marker);
+      cookingByHome.delete(id);
+    }
+  }
   if(b.type==='base' && b.owner===uid){
     baseMarker = markers.get(id);
     baseMeta.level = b.level;
@@ -441,15 +476,42 @@ function renderBuildingDoc(id, data){
   } else if(b.type==='base' && b.owner !== uid && b.poly) {
     applyOtherBaseZone(id, b);
   }
+  if (b.owner === uid && ['drovosekdom', 'minehouse', 'fermerdom'].includes(b.type)) {
+    const now = Date.now();
+    const workers = b.workers || [];
+    const validWorkers = workers.filter(w => w.expireTs > now);
+    const set = (b.type === 'drovosekdom' ? woodcuttersByHome : b.type === 'minehouse' ? minersByHome : farmersByHome).get(id) || new Set();
+    if (validWorkers.length > set.size) {
+      const type = b.type === 'drovosekdom' ? 'wood' : b.type === 'minehouse' ? 'miner' : 'fermer';
+      for (let i = set.size; i < validWorkers.length; i++) {
+        const workerMarker = createWorker(id, type);
+        if (workerMarker) {
+          set.add(workerMarker);
+          const remaining = validWorkers[i].expireTs - now;
+          setTimeout(() => {
+            if (set.has(workerMarker)) {
+              map.removeLayer(workerMarker);
+              set.delete(workerMarker);
+            }
+          }, remaining);
+        }
+      }
+    }
+    marker.bindPopup(makePopupHtml(b));
+  }
 }
 function unrenderBuildingDoc(id){
-  console.log('Unrendering building:', id); // Debug log
   const marker = markers.get(id);
   const b = buildingData.get(id);
   if(!marker) return;
   map.removeLayer(marker);
   markers.delete(id);
   buildingData.delete(id);
+  if (cookingByHome.has(id)) {
+    const {ui} = cookingByHome.get(id);
+    if (ui) map.removeLayer(ui.marker);
+    cookingByHome.delete(id);
+  }
   if(b?.type==='base' && b.owner===uid){
     if(baseZone){ baseZone.remove(); baseZone=null; }
     baseMarker=null; baseMeta={ level:0, color:randomBrightColor(), paintSize:32, poly:{angles:[],radii:[]} };
@@ -465,86 +527,60 @@ function unrenderBuildingDoc(id){
 let buildingsUnsub = null;
 let playerUnsub = null;
 function startRealtime(){
-  if (!uid) {
-    console.error('Cannot startRealtime: uid is null');
-    showToast('Ошибка: пользователь не авторизован.', [], 2500);
-    return;
-  }
+  if (!uid) return;
   playerDocRef = doc(db, 'players', uid);
   playerUnsub = onSnapshot(playerDocRef, snap => {
     if(snap.exists()){
       const d = snap.data();
-      console.log('Player data updated:', d); // Debug log
       resources.money = d.money ?? 100;
       resources.wood = d.wood ?? 10;
       resources.stone = d.stone ?? 0;
       resources.corn = d.corn ?? 0;
+      resources.food = d.food ?? 30;
       level = d.level ?? 1;
       xp = d.xp ?? 0;
       updateResourcePanel();
       addXP(0);
     } else {
-      console.warn('Player document does not exist, creating...');
       ensurePlayerDoc();
     }
-  }, error => {
-    console.error('Player snapshot error:', error);
-    showToast('Ошибка получения данных игрока: ' + error.message, [], 2500);
   });
   buildingsUnsub = onSnapshot(collection(db, 'buildings'), snap => {
-    console.log('Buildings snapshot received, changes:', snap.docChanges().length); // Debug log
     snap.docChanges().forEach(ch => {
-      console.log('Firestore change:', ch.type, ch.doc.id, ch.doc.data()); // Debug log
       if(ch.type === 'added' || ch.type === 'modified') renderBuildingDoc(ch.doc.id, ch.doc.data());
       if(ch.type === 'removed') unrenderBuildingDoc(ch.doc.id);
     });
-  }, error => {
-    console.error('Buildings snapshot error:', error);
-    showToast('Ошибка получения данных зданий: ' + error.message, [], 2500);
   });
   // Пассивный доход от базы
   setInterval(() => {
     if (baseMeta.level > 0) {
-      resources.money += baseMeta.level; // Добавляем монеты по уровню базы
+      resources.money += baseMeta.level;
       updateResourcePanel();
     }
-  }, 1000); // Каждую секунду
-
+  }, 1000);
   // Сохранение в Firestore каждые 5 секунд
   setInterval(async () => {
     if (uid && playerDocRef) {
-      try {
-        await updateDoc(playerDocRef, { money: resources.money });
-        console.log('Money saved to Firestore:', resources.money);
-      } catch (e) {
-        console.error('Error saving money:', e);
-      }
+      await updateDoc(playerDocRef, { money: resources.money });
     }
-  }, 5000); // Каждые 5 секунд
+  }, 5000);
+  // Обработка готовки
+  setInterval(processCooking, 1000);
+  // Чистка expired workers каждые 30 сек
+  setInterval(cleanExpiredWorkers, 30000);
 }
 async function ensurePlayerDoc(){
-  if (!uid || !playerDocRef) {
-    console.error('Cannot ensurePlayerDoc: uid or playerDocRef is null');
-    showToast('Ошибка: пользователь не авторизован.', [], 2500);
-    return;
-  }
-  try {
-    const s = await getDoc(playerDocRef);
-    if(!s.exists()){
-      console.log('Creating new player document for uid:', uid); // Debug log
-      await setDoc(playerDocRef, {
-        money: 100, wood: 10, stone: 0, corn: 0,
-        level: 1, xp: 0, createdAt: serverTimestamp()
-      });
-    }
-  } catch (e) {
-    console.error('Error in ensurePlayerDoc:', e);
-    showToast('Ошибка создания профиля игрока: ' + e.message, [], 2500);
+  if (!uid || !playerDocRef) return;
+  const s = await getDoc(playerDocRef);
+  if(!s.exists()){
+    await setDoc(playerDocRef, {
+      money: 100, wood: 10, stone: 0, corn: 0, food: 30,
+      level: 1, xp: 0, createdAt: serverTimestamp()
+    });
   }
 }
 /* ---------- auth state ---------- */
 onAuthStateChanged(auth, async user => {
-  console.log('Auth state changed:', user ? user.uid : 'null'); // Debug log
   if(user){
     uid = user.uid;
     userName.textContent = user.displayName || user.email || 'Player';
@@ -569,9 +605,6 @@ onAuthStateChanged(auth, async user => {
     otherBaseZones.forEach(zone => zone.remove());
     otherBaseZones.clear();
   }
-}, error => {
-  console.error('Auth state error:', error);
-  showToast('Ошибка аутентификации: ' + error.message, [], 2500);
 });
 /* ====== ресурсы на карте (декоративные) ====== */
 const TREE_ICONS = [
@@ -660,6 +693,8 @@ const MINER_FRAMES= ['./images/Miner1.png','./images/Miner2.png','./images/Miner
 const FERM_FRAMES = ['./images/ferma1.png','./images/ferma2.png','./images/ferma3.png','./images/ferma4.png'];
 const IDLE_INDEX = 1, FRAME_INTERVAL_MS = 160;
 const STEP_SPEED = 0.0009, ARRIVE_EPS = 0.00008;
+const WORKER_HIRE_DURATION_MS = 300000; // 5 минут
+const FOOD_COST_PER_HIRE = 2;
 function makeWorkerDiv(frameUrl, flipped){
   const html = `<div class="worker"><img src="${frameUrl}" class="${flipped?'flip-x':''}" draggable="false"/></div>`;
   return L.divIcon({ html, className:'', iconSize:[48,48], iconAnchor:[24,24] });
@@ -704,27 +739,96 @@ function createWorker(homeId, type){
     if(m.worker.selected){ el?.classList.add('marker-selected'); m.setOpacity(0.9);} else { el?.classList.remove('marker-selected'); m.setOpacity(1);} });
   return m;
 }
-window.hireWoodcutter = function(homeId){
+window.hireWoodcutter = async function(homeId){
   const b = buildingData.get(homeId); if(!b || b.owner!==uid || b.type!=='drovosekdom') return;
   const set = woodcuttersByHome.get(homeId) || new Set();
-  const max = DROVOSEKDOM_LEVELS[b.level].workers; if(set.size>=max){ showToast(`Лимит дровосеков ${set.size}/${max}.`,[],1400); return; }
-  const w=createWorker(homeId,'wood'); if(w){ set.add(w); woodcuttersByHome.set(homeId,set); }
-  showToast('👷 Дровосек нанят!',[],1200);
+  const max = DROVOSEKDOM_LEVELS[b.level].workers;
+  if(set.size>=max){ showToast(`Лимит дровосеков ${set.size}/${max}.`,[],1400); return; }
+  if(resources.food < FOOD_COST_PER_HIRE){ showToast(`Недостаточно еды (нужно ${FOOD_COST_PER_HIRE}🍔).`,[],1400); return; }
+  resources.food -= FOOD_COST_PER_HIRE;
+  updateResourcePanel();
+  await updateDoc(playerDocRef, {food: resources.food});
+  const expireTs = Date.now() + WORKER_HIRE_DURATION_MS;
+  await updateDoc(doc(db, 'buildings', homeId), {workers: arrayUnion({expireTs})});
+  const w = createWorker(homeId, 'wood');
+  if(w){
+    set.add(w);
+    woodcuttersByHome.set(homeId, set);
+    setTimeout(() => {
+      if (set.has(w)) {
+        map.removeLayer(w);
+        set.delete(w);
+      }
+    }, WORKER_HIRE_DURATION_MS);
+  }
+  const marker = markers.get(homeId);
+  if (marker) marker.bindPopup(makePopupHtml(b));
+  showToast('👷 Дровосек нанят на 5 мин!',[],1200);
 };
-window.hireMiner = function(homeId){
+window.hireMiner = async function(homeId){
   const b = buildingData.get(homeId); if(!b || b.owner!==uid || b.type!=='minehouse') return;
   const set = minersByHome.get(homeId) || new Set();
-  const max = MINEHOUSE_LEVELS[b.level].workers; if(set.size>=max){ showToast(`Лимит шахтёров ${set.size}/${max}.`,[],1400); return; }
-  const w=createWorker(homeId,'miner'); if(w){ set.add(w); minersByHome.set(homeId,set); }
-  showToast('⛏️ Шахтёр нанят!',[],1200);
+  const max = MINEHOUSE_LEVELS[b.level].workers;
+  if(set.size>=max){ showToast(`Лимит шахтёров ${set.size}/${max}.`,[],1400); return; }
+  if(resources.food < FOOD_COST_PER_HIRE){ showToast(`Недостаточно еды (нужно ${FOOD_COST_PER_HIRE}🍔).`,[],1400); return; }
+  resources.food -= FOOD_COST_PER_HIRE;
+  updateResourcePanel();
+  await updateDoc(playerDocRef, {food: resources.food});
+  const expireTs = Date.now() + WORKER_HIRE_DURATION_MS;
+  await updateDoc(doc(db, 'buildings', homeId), {workers: arrayUnion({expireTs})});
+  const w = createWorker(homeId, 'miner');
+  if(w){
+    set.add(w);
+    minersByHome.set(homeId, set);
+    setTimeout(() => {
+      if (set.has(w)) {
+        map.removeLayer(w);
+        set.delete(w);
+      }
+    }, WORKER_HIRE_DURATION_MS);
+  }
+  const marker = markers.get(homeId);
+  if (marker) marker.bindPopup(makePopupHtml(b));
+  showToast('⛏️ Шахтёр нанят на 5 мин!',[],1200);
 };
-window.hireFermer = function(homeId){
+window.hireFermer = async function(homeId){
   const b = buildingData.get(homeId); if(!b || b.owner!==uid || b.type!=='fermerdom') return;
   const set = farmersByHome.get(homeId) || new Set();
-  const max = FERMERVOM_LEVELS[b.level].workers; if(set.size>=max){ showToast(`Лимит фермеров ${set.size}/${max}.`,[],1400); return; }
-  const w=createWorker(homeId,'fermer'); if(w){ set.add(w); farmersByHome.set(homeId,set); }
-  showToast('🚜 Фермер нанят!',[],1200);
+  const max = FERMERVOM_LEVELS[b.level].workers;
+  if(set.size>=max){ showToast(`Лимит фермеров ${set.size}/${max}.`,[],1400); return; }
+  if(resources.food < FOOD_COST_PER_HIRE){ showToast(`Недостаточно еды (нужно ${FOOD_COST_PER_HIRE}🍔).`,[],1400); return; }
+  resources.food -= FOOD_COST_PER_HIRE;
+  updateResourcePanel();
+  await updateDoc(playerDocRef, {food: resources.food});
+  const expireTs = Date.now() + WORKER_HIRE_DURATION_MS;
+  await updateDoc(doc(db, 'buildings', homeId), {workers: arrayUnion({expireTs})});
+  const w = createWorker(homeId, 'fermer');
+  if(w){
+    set.add(w);
+    farmersByHome.set(homeId, set);
+    setTimeout(() => {
+      if (set.has(w)) {
+        map.removeLayer(w);
+        set.delete(w);
+      }
+    }, WORKER_HIRE_DURATION_MS);
+  }
+  const marker = markers.get(homeId);
+  if (marker) marker.bindPopup(makePopupHtml(b));
+  showToast('🚜 Фермер нанят на 5 мин!',[],1200);
 };
+async function cleanExpiredWorkers() {
+  if (!uid) return;
+  const now = Date.now();
+  for (const [id, b] of buildingData.entries()) {
+    if (b.owner === uid && ['drovosekdom', 'minehouse', 'fermerdom'].includes(b.type) && b.workers) {
+      const valid = b.workers.filter(w => w.expireTs > now);
+      if (valid.length < b.workers.length) {
+        await updateDoc(doc(db, 'buildings', id), {workers: valid});
+      }
+    }
+  }
+}
 function startHarvest(workerMarker, targetMap){
   const w = workerMarker.worker; const tgt = targetMap.get(w.harvest.targetId); if(!tgt) return;
   w.harvest.startTs = performance.now(); w.state='harvest'; w.anim.frameIndex=IDLE_INDEX; w.anim.accMs=0;
@@ -802,6 +906,40 @@ function moveWorkers(){
   minersByHome.forEach((set,homeId)=>updateSet(set,homeId,'miner'));
   farmersByHome.forEach((set,homeId)=>updateSet(set,homeId,'fermer'));
   requestAnimationFrame(moveWorkers);
+}
+/* ====== готовка еды ====== */
+window.cookFood = async function(id) {
+  const b = buildingData.get(id); if(!b || b.owner!==uid || b.type!=='houseeat') return;
+  if (b.cooking) return showToast('Уже готовится.', [], 1400);
+  if (resources.corn < 5 || resources.money < 50) return showToast('Недостаточно ресурсов (5🌽 +50💰).', [], 1400);
+  resources.corn -= 5;
+  resources.money -= 50;
+  updateResourcePanel();
+  await updateDoc(playerDocRef, {corn: resources.corn, money: resources.money});
+  const duration = HOUSEEAT_LEVELS[b.level].cookTime;
+  const start = Date.now();
+  await updateDoc(doc(db, 'buildings', id), {cooking: {start, duration}});
+  showToast('Готовка начата!', [], 1200);
+};
+async function processCooking() {
+  const now = Date.now();
+  for (const [id, {startTs, duration, ui}] of cookingByHome.entries()) {
+    const elapsed = now - startTs;
+    const progress = Math.min(1, elapsed / duration);
+    if (ui && ui.bar) ui.bar.style.width = (progress * 100) + '%';
+    if (elapsed >= duration) {
+      const b = buildingData.get(id);
+      if (b) {
+        resources.food += HOUSEEAT_LEVELS[b.level].portions;
+        updateResourcePanel();
+        await updateDoc(playerDocRef, {food: resources.food});
+        await updateDoc(doc(db, 'buildings', id), {cooking: null});
+        showToast(`🍔 +${HOUSEEAT_LEVELS[b.level].portions} порций готово!`, [], 1200);
+      }
+      if (ui) map.removeLayer(ui.marker);
+      cookingByHome.delete(id);
+    }
+  }
 }
 /* ===== рынок (с кукурузой 10->150) + сохранение денег ===== */
 const overlay = document.getElementById('overlay');
@@ -908,27 +1046,26 @@ map.on('click', async e=>{
   const bp = placementMode.blueprint;
   if(bp.type!=='base' && !pointInsideBase(e.latlng)){ showToast('Строить можно только в зоне вашей базы.',[],1800); return; }
   if(bp.cost>0){ resources.money -= bp.cost; updateResourcePanel(); if(uid && playerDocRef) await updateDoc(playerDocRef, { money:resources.money }); }
-  console.log('Adding building at:', e.latlng, 'Type:', bp.type); // Debug log
   try {
     let additionalData = {};
     if (bp.type === 'base') {
       additionalData.color = randomBrightColor();
       additionalData.poly = makeBasePolyAround(e.latlng, BASE_LEVELS[1].radius);
     }
+    if (['drovosekdom', 'minehouse', 'fermerdom', 'houseeat'].includes(bp.type)) {
+      additionalData.workers = [];
+    }
     const docRef = await addDoc(collection(db,'buildings'), {
       owner: uid, type: bp.type, name: bp.name||bp.type, level: 1,
       lat: e.latlng.lat, lng: e.latlng.lng, createdAt: serverTimestamp(),
       ...additionalData
     });
-    console.log('Building added to Firestore with ID:', docRef.id); // Debug log
-    // Immediately render the building to avoid delay
     renderBuildingDoc(docRef.id, {
       owner: uid, type: bp.type, name: bp.name||bp.type, level: 1,
       lat: e.latlng.lat, lng: e.latlng.lng,
       ...additionalData
     });
   } catch (e) {
-    console.error('Error adding building to Firestore:', e);
     showToast('Ошибка при добавлении здания: ' + e.message, [], 2500);
   }
   placementMode = {active:false, blueprint:null}; removeGhost();
@@ -938,9 +1075,7 @@ window.deleteBuilding = async function(id){
   const b = buildingData.get(id); if(!b || b.owner!==uid) return alert('Можно удалять только свои здания.');
   try {
     await deleteDoc(doc(db,'buildings', id));
-    console.log('Building deleted:', id); // Debug log
   } catch (e) {
-    console.error('Error deleting building:', e);
     showToast('Ошибка при удалении здания: ' + e.message, [], 2500);
   }
 };
@@ -952,10 +1087,8 @@ window.upgradeBuilding = async function(id){
   if(uid && playerDocRef) await updateDoc(playerDocRef, { money:resources.money });
   try {
     await updateDoc(doc(db,'buildings', id), { level: b.level+1 });
-    console.log('Building upgraded:', id, 'New level:', b.level+1); // Debug log
     showToast('Здание улучшено!',[],1200);
   } catch (e) {
-    console.error('Error upgrading building:', e);
     showToast('Ошибка при улучшении здания: ' + e.message, [], 2500);
   }
 };
@@ -999,7 +1132,7 @@ paletteDiv.innerHTML=''; colors.forEach(c=>{const d=document.createElement('div'
 window.editBuilding = function(id){
   const m=markers.get(id); if(!m) return; editingMarker=m; editMenu.style.display='flex';
   const b=buildingData.get(id);
-  const table = b.type==='drovosekdom'?DROVOSEKDOM_LEVELS: b.type==='minehouse'?MINEHOUSE_LEVELS: b.type==='fermerdom'?FERMERVOM_LEVELS: BASE_LEVELS;
+  const table = b.type==='drovosekdom'?DROVOSEKDOM_LEVELS: b.type==='minehouse'?MINEHOUSE_LEVELS: b.type==='fermerdom'?FERMERVOM_LEVELS: b.type==='houseeat'?HOUSEEAT_LEVELS: BASE_LEVELS;
   const size = b.type==='base'?BASE_LEVELS[baseMeta.level].paint: table[b.level].paint;
   setCanvasLogicalSize(size);
   const img=new Image(); img.crossOrigin='anonymous'; img.src=m.currentIcon; img.onload=()=>{ ctx.clearRect(0,0,logicalSize,logicalSize); ctx.drawImage(img,0,0,logicalSize,logicalSize); };
@@ -1053,9 +1186,7 @@ window.clearAllMyBuildings = async function() {
     });
     await Promise.all(deletePromises);
     showToast('Все ваши здания удалены!', [], 1500);
-    console.log('All user buildings cleared.');
   } catch (e) {
-    console.error('Error clearing buildings:', e);
     showToast('Ошибка при удалении зданий: ' + e.message, [], 2500);
   }
 };
