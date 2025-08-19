@@ -425,10 +425,11 @@ function makePopupHtml(b){
 function renderBuildingDoc(id, data){
   const b = { id, ...data };
   const existed = markers.has(id);
+  let marker;
   if(!existed){
     const spec = iconSpecForType(b.type, b.level||1);
     const iconUrl = b.customIcon || iconUrlForType(b.type);
-    const marker = L.marker([b.lat, b.lng], {icon: L.icon({iconUrl, iconSize: spec.size, iconAnchor: spec.anchor})}).addTo(map);
+    marker = L.marker([b.lat, b.lng], {icon: L.icon({iconUrl, iconSize: spec.size, iconAnchor: spec.anchor})}).addTo(map);
     setMarkerHidden(marker, !isSpriteZoomVisible(map.getZoom()));
     marker.options.owner = b.owner;
     marker.options.buildingId = id;
@@ -448,7 +449,7 @@ function renderBuildingDoc(id, data){
     if(b.type==='minehouse' && b.owner===uid && !minersByHome.has(id)) minersByHome.set(id, new Set());
     if(b.type==='fermerdom' && b.owner===uid && !farmersByHome.has(id)) farmersByHome.set(id, new Set());
   } else {
-    const marker = markers.get(id);
+    marker = markers.get(id);
     const prev = buildingData.get(id);
     buildingData.set(id, b);
     marker.bindPopup(makePopupHtml(b));
@@ -466,15 +467,6 @@ function renderBuildingDoc(id, data){
       if (ui) map.removeLayer(ui.marker);
       cookingByHome.delete(id);
     }
-  }
-  if(b.type==='base' && b.owner===uid){
-    baseMarker = markers.get(id);
-    baseMeta.level = b.level;
-    baseMeta.color = b.color || randomBrightColor();
-    baseMeta.poly = b.poly || makeBasePolyAround(baseMarker.getLatLng(), BASE_LEVELS[b.level].radius);
-    applyBaseZone();
-  } else if(b.type==='base' && b.owner !== uid && b.poly) {
-    applyOtherBaseZone(id, b);
   }
   if (b.owner === uid && ['drovosekdom', 'minehouse', 'fermerdom'].includes(b.type)) {
     const now = Date.now();
@@ -499,6 +491,15 @@ function renderBuildingDoc(id, data){
     }
     marker.bindPopup(makePopupHtml(b));
   }
+  if(b.type==='base' && b.owner===uid){
+    baseMarker = marker;
+    baseMeta.level = b.level;
+    baseMeta.color = b.color || randomBrightColor();
+    baseMeta.poly = b.poly || makeBasePolyAround(baseMarker.getLatLng(), BASE_LEVELS[b.level].radius);
+    applyBaseZone();
+  } else if(b.type==='base' && b.owner !== uid && b.poly) {
+    applyOtherBaseZone(id, b);
+  }
 }
 function unrenderBuildingDoc(id){
   const marker = markers.get(id);
@@ -511,6 +512,16 @@ function unrenderBuildingDoc(id){
     const {ui} = cookingByHome.get(id);
     if (ui) map.removeLayer(ui.marker);
     cookingByHome.delete(id);
+  }
+  if (['drovosekdom', 'minehouse', 'fermerdom'].includes(b?.type)) {
+    const set = (b.type === 'drovosekdom' ? woodcuttersByHome : b.type === 'minehouse' ? minersByHome : farmersByHome).get(id);
+    if (set) {
+      set.forEach(w => map.removeLayer(w));
+      set.clear();
+    }
+    if (b.type === 'drovosekdom') woodcuttersByHome.delete(id);
+    if (b.type === 'minehouse') minersByHome.delete(id);
+    if (b.type === 'fermerdom') farmersByHome.delete(id);
   }
   if(b?.type==='base' && b.owner===uid){
     if(baseZone){ baseZone.remove(); baseZone=null; }
