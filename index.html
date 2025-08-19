@@ -82,13 +82,9 @@
   <div id="xpWrap">
     <span id="xpText">Lv 1 • 0/500</span>
     <div id="xpBar"><div class="fill"></div></div>
-    <div style="font-size: 11px; color: #aaa; margin-top: 2px;">
-      Рабочие: <span id="workerLimit">0/2</span> | Ресурсы: <span id="resourceLimit">0/10</span>
-    </div>
   </div>
   <button id="shopToggle">Магазин</button>
   <button id="marketBtn">Рынок</button>
-  <button id="sellAllBtn" style="background: #dc3545;">Продать все ресурсы</button>
   <div id="authBox">
     <span id="userName"></span>
     <button id="loginBtn">Войти с Google</button>
@@ -135,6 +131,7 @@
   <div class="actions">
     <button id="m-cancel">Отмена</button>
     <button id="m-sell">Продать</button>
+    <button id="m-sell-all" style="background: #dc3545;">Продать все ресурсы</button>
   </div>
 </div>
 <!-- магазин -->
@@ -202,8 +199,7 @@ logoutBtn.onclick = async () => { try{ await signOut(auth); }catch(e){} };
 let uid = null; // текущий игрок
 let playerDocRef = null; // ссылка на players/{uid}
 /* ---------- Игровые состояния (локально) ---------- */
-// Экспоненциальный рост опыта для каждого уровня
-const XP_PER_LEVEL = [0, 100, 250, 500, 1000, 2000, 4000, 8000, 16000, 32000, 64000];
+const XP_PER_LEVEL = 500;
 let level = 1, xp = 0;
 const resources = { money: 100, wood: 10, stone: 0, corn: 0 };
 /* ---------- helpers UI ---------- */
@@ -213,32 +209,13 @@ function updateResourcePanel(){
     <div class="res">🪵 <b id="r-wood">${resources.wood}</b></div>
     <div class="res">🪨 <b id="r-stone">${resources.stone}</b></div>
     <div class="res">🌽 <b id="r-corn">${resources.corn}</b></div>`;
-  
-  // Обновляем лимиты
-  const maxWorkers = Math.floor(level * 2);
-  const currentWorkers = woodcuttersByHome.size + minersByHome.size + farmersByHome.size;
-  const maxResources = level * 10;
-  const currentResources = resources.wood + resources.stone + resources.corn;
-  
-  document.getElementById('workerLimit').textContent = `${currentWorkers}/${maxWorkers}`;
-  document.getElementById('resourceLimit').textContent = `${currentResources}/${maxResources}`;
 }
 updateResourcePanel();
 function addXP(amount){
   xp += amount;
-  
-  // Проверяем, поднялся ли игрок на уровень
-  while(level < XP_PER_LEVEL.length - 1 && xp >= XP_PER_LEVEL[level]){
-    xp -= XP_PER_LEVEL[level];
-    level++;
-    showToast(`📈 Уровень ${level}!`, [], 1500);
-  }
-  
-  // Определяем XP для следующего уровня
-  const nextLevelXP = level < XP_PER_LEVEL.length - 1 ? XP_PER_LEVEL[level] : XP_PER_LEVEL[level];
-  
-  document.querySelector('#xpText').textContent = `Lv ${level} • ${xp}/${nextLevelXP}`;
-  const p = Math.max(0, Math.min(1, xp/nextLevelXP))*100;
+  while(xp >= XP_PER_LEVEL){ xp -= XP_PER_LEVEL; level++; showToast(`📈 Уровень ${level}!`,[],1500); }
+  document.querySelector('#xpText').textContent = `Lv ${level} • ${xp}/${XP_PER_LEVEL}`;
+  const p = Math.max(0, Math.min(1, xp/XP_PER_LEVEL))*100;
   document.querySelector('#xpBar .fill').style.width = p + '%';
 }
 addXP(0);
@@ -680,49 +657,23 @@ function createWorker(homeId, type){
 window.hireWoodcutter = function(homeId){
   const b = buildingData.get(homeId); if(!b || b.owner!==uid || b.type!=='drovosekdom') return;
   const set = woodcuttersByHome.get(homeId) || new Set();
-  
-  // Ограничение рабочих в зависимости от уровня игрока
-  const maxWorkers = Math.min(DROVOSEKDOM_LEVELS[b.level].workers, Math.floor(level * 2));
-  
-  if(set.size >= maxWorkers){ 
-    showToast(`Лимит дровосеков ${set.size}/${maxWorkers}. Поднимите уровень для найма больше рабочих.`, [], 2000); 
-    return; 
-  }
-  
+  const max = DROVOSEKDOM_LEVELS[b.level].workers; if(set.size>=max){ showToast(`Лимит дровосеков ${set.size}/${max}.`,[],1400); return; }
   const w=createWorker(homeId,'wood'); if(w){ set.add(w); woodcuttersByHome.set(homeId,set); }
-  showToast('👷 Дровосек нанят!', [], 1200);
+  showToast('👷 Дровосек нанят!',[],1200);
 };
-
 window.hireMiner = function(homeId){
   const b = buildingData.get(homeId); if(!b || b.owner!==uid || b.type!=='minehouse') return;
   const set = minersByHome.get(homeId) || new Set();
-  
-  // Ограничение рабочих в зависимости от уровня игрока
-  const maxWorkers = Math.min(MINEHOUSE_LEVELS[b.level].workers, Math.floor(level * 2));
-  
-  if(set.size >= maxWorkers){ 
-    showToast(`Лимит шахтёров ${set.size}/${maxWorkers}. Поднимите уровень для найма больше рабочих.`, [], 2000); 
-    return; 
-  }
-  
+  const max = MINEHOUSE_LEVELS[b.level].workers; if(set.size>=max){ showToast(`Лимит шахтёров ${set.size}/${max}.`,[],1400); return; }
   const w=createWorker(homeId,'miner'); if(w){ set.add(w); minersByHome.set(homeId,set); }
-  showToast('⛏️ Шахтёр нанят!', [], 1200);
+  showToast('⛏️ Шахтёр нанят!',[],1200);
 };
-
 window.hireFermer = function(homeId){
   const b = buildingData.get(homeId); if(!b || b.owner!==uid || b.type!=='fermerdom') return;
   const set = farmersByHome.get(homeId) || new Set();
-  
-  // Ограничение рабочих в зависимости от уровня игрока
-  const maxWorkers = Math.min(FERMERVOM_LEVELS[b.level].workers, Math.floor(level * 2));
-  
-  if(set.size >= maxWorkers){ 
-    showToast(`Лимит фермеров ${set.size}/${maxWorkers}. Поднимите уровень для найма больше рабочих.`, [], 2000); 
-    return; 
-  }
-  
+  const max = FERMERVOM_LEVELS[b.level].workers; if(set.size>=max){ showToast(`Лимит фермеров ${set.size}/${max}.`,[],1400); return; }
   const w=createWorker(homeId,'fermer'); if(w){ set.add(w); farmersByHome.set(homeId,set); }
-  showToast('🚜 Фермер нанят!', [], 1200);
+  showToast('🚜 Фермер нанят!',[],1200);
 };
 function startHarvest(workerMarker, targetMap){
   const w = workerMarker.worker; const tgt = targetMap.get(w.harvest.targetId); if(!tgt) return;
@@ -740,30 +691,10 @@ function completeHarvest(workerMarker, targetMap, gainMin=2, gainMax=5){
 }
 async function deliverResources(workerMarker){
   const w = workerMarker.worker; if(w.cargo<=0) return;
-  
-  // Ограничение ресурсов в зависимости от уровня игрока
-  const maxResources = level * 10; // Максимум ресурсов = уровень * 10
-  const currentTotal = resources.wood + resources.stone + resources.corn;
-  
-  if(currentTotal + w.cargo > maxResources){
-    const canAdd = Math.max(0, maxResources - currentTotal);
-    if(canAdd > 0){
-      if(w.type==='wood'){ resources.wood += canAdd; showToast(`🪵 +${canAdd} (лимит ресурсов)`, [], 1500); }
-      else if(w.type==='miner'){ resources.stone += canAdd; showToast(`🪨 +${canAdd} (лимит ресурсов)`, [], 1500); }
-      else { resources.corn += canAdd; showToast(`🌽 +${canAdd} (лимит ресурсов)`, [], 1500); }
-      addXP(canAdd*2);
-    } else {
-      showToast(`Достигнут лимит ресурсов (${maxResources}). Поднимите уровень!`, [], 2000);
-    }
-  } else {
-    if(w.type==='wood'){ resources.wood += w.cargo; showToast(`🪵 +${w.cargo}`, [], 900); }
-    else if(w.type==='miner'){ resources.stone += w.cargo; showToast(`🪨 +${w.cargo}`, [], 900); }
-    else { resources.corn += w.cargo; showToast(`🌽 +${w.cargo}`, [], 900); }
-    addXP(w.cargo*2);
-  }
-  
-  w.cargo=0; 
-  updateResourcePanel();
+  if(w.type==='wood'){ resources.wood += w.cargo; showToast(`🪵 +${w.cargo}`,[],900); }
+  else if(w.type==='miner'){ resources.stone += w.cargo; showToast(`🪨 +${w.cargo}`,[],900); }
+  else { resources.corn += w.cargo; showToast(`🌽 +${w.cargo}`,[],900); }
+  addXP(w.cargo*2); w.cargo=0; updateResourcePanel();
   if(uid && playerDocRef) await updateDoc(playerDocRef, { wood:resources.wood, stone:resources.stone, corn:resources.corn, level, xp });
 }
 function updateHarvestUI(workerMarker){
@@ -822,43 +753,6 @@ function moveWorkers(){
   farmersByHome.forEach((set,homeId)=>updateSet(set,homeId,'fermer'));
   requestAnimationFrame(moveWorkers);
 }
-/* ===== кнопка продать все ресурсы ===== */
-const sellAllBtn = document.getElementById('sellAllBtn');
-sellAllBtn.onclick = async () => {
-  if (!uid) {
-    showToast('Сначала войдите в аккаунт.', [], 1500);
-    return;
-  }
-  
-  const totalResources = resources.wood + resources.stone + resources.corn;
-  if (totalResources <= 0) {
-    showToast('У вас нет ресурсов для продажи.', [], 1500);
-    return;
-  }
-  
-  const totalGold = resources.wood * 5 + resources.stone * 15 + resources.corn * 15;
-  
-  // Продаем все ресурсы
-  resources.wood = 0;
-  resources.stone = 0;
-  resources.corn = 0;
-  resources.money += totalGold;
-  
-  updateResourcePanel();
-  
-  // Сохраняем в Firestore
-  if (uid && playerDocRef) {
-    await updateDoc(playerDocRef, { 
-      money: resources.money, 
-      wood: resources.wood, 
-      stone: resources.stone, 
-      corn: resources.corn 
-    });
-  }
-  
-  showToast(`Продано ${totalResources} ресурсов за ${totalGold} 💰!`, [], 2000);
-};
-
 /* ===== рынок (с кукурузой 10->150) + сохранение денег ===== */
 const overlay = document.getElementById('overlay');
 const marketMenu = document.getElementById('marketMenu');
@@ -874,6 +768,7 @@ const mDec = document.getElementById('m-dec');
 const mInc = document.getElementById('m-inc');
 const mMax = document.getElementById('m-max');
 const mSell = document.getElementById('m-sell');
+const mSellAll = document.getElementById('m-sell-all');
 const mCancel=document.getElementById('m-cancel');
 const WOOD_PER_PACK = 10, WOOD_PRICE = 50;
 const STONE_PER_PACK = 10, STONE_PRICE = 150;
@@ -911,6 +806,43 @@ mSell.onclick = async ()=>{
   updateResourcePanel(); closeMarket();
   if(uid && playerDocRef) await updateDoc(playerDocRef, { money:resources.money, wood:resources.wood, stone:resources.stone, corn:resources.corn });
   showToast('Сделка совершена!',[],1200);
+};
+
+// Обработчик для кнопки "Продать все ресурсы"
+mSellAll.onclick = async () => {
+  if (!uid) {
+    showToast('Сначала войдите в аккаунт.', [], 1500);
+    return;
+  }
+  
+  const totalResources = resources.wood + resources.stone + resources.corn;
+  if (totalResources <= 0) {
+    showToast('У вас нет ресурсов для продажи.', [], 1500);
+    return;
+  }
+  
+  const totalGold = resources.wood * 5 + resources.stone * 15 + resources.corn * 15;
+  
+  // Продаем все ресурсы
+  resources.wood = 0;
+  resources.stone = 0;
+  resources.corn = 0;
+  resources.money += totalGold;
+  
+  updateResourcePanel();
+  closeMarket();
+  
+  // Сохраняем в Firestore
+  if (uid && playerDocRef) {
+    await updateDoc(playerDocRef, { 
+      money: resources.money, 
+      wood: resources.wood, 
+      stone: resources.stone, 
+      corn: resources.corn 
+    });
+  }
+  
+  showToast(`Продано ${totalResources} ресурсов за ${totalGold} 💰!`, [], 2000);
 };
 /* ===== магазин/размещение — запись в Firestore ===== */
 const shopPanel = document.getElementById('shopPanel');
