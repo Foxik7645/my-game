@@ -29,36 +29,43 @@ export const corn = new Map();
 
 let treeId = 0, rockId = 0, cornId = 0;
 
-// ===== Функции спавна около здания =====
-export function spawnTreesBatch(count=5, baseLat=55.75, baseLng=37.61){
+// ===== Служебные функции =====
+function randBetween(a,b){ return a + Math.random()*(b-a); }
+function metersToLat(m){ return m/111000; }
+function metersToLng(m, lat){ return m/(111000*Math.cos(lat*Math.PI/180)); }
+
+// ===== Функции спавна ресурсов =====
+import { getDomAnchors } from './buildings.js';
+import { getTotalWorkers } from './worker.js';
+
+function spawnAroundAnchors(poolMap, icons, genId, type){
   if(!map) return;
-  for(let i=0;i<count;i++){
-    const lat = baseLat + (Math.random()-0.5)*0.01; 
-    const lng = baseLng + (Math.random()-0.5)*0.01;
-    const icon = treeIcons[Math.floor(Math.random()*treeIcons.length)];
+  const anchors = getDomAnchors(type);
+  if(anchors.length===0) return;
+  const totalLevels = anchors.reduce((s,a)=>s+(a.level||1),0);
+  const totalWorkers = getTotalWorkers(type);
+  const capacity = totalLevels*5 + totalWorkers*2;
+  while(poolMap.size < capacity){
+    const anc = anchors[Math.floor(Math.random()*anchors.length)];
+    const ang = Math.random()*2*Math.PI;
+    const r = randBetween(20,60);
+    const lat = anc.lat + metersToLat(r*Math.sin(ang));
+    const lng = anc.lng + metersToLng(r*Math.cos(ang), anc.lat);
+    const icon = icons[Math.floor(Math.random()*icons.length)];
     const marker = L.marker([lat,lng],{icon}).addTo(map);
-    trees.set(`tree_${treeId++}`, marker);
+    const id = genId();
+    poolMap.set(id,{id,lat,lng,marker});
   }
 }
 
-export function spawnRocksBatch(count=3, baseLat=55.75, baseLng=37.61){
-  if(!map) return;
-  for(let i=0;i<count;i++){
-    const lat = baseLat + (Math.random()-0.5)*0.01;
-    const lng = baseLng + (Math.random()-0.5)*0.01;
-    const icon = rockIcons[Math.floor(Math.random()*rockIcons.length)];
-    const marker = L.marker([lat,lng],{icon}).addTo(map);
-    rocks.set(`rock_${rockId++}`, marker);
-  }
+export function spawnTreesBatch(){
+  spawnAroundAnchors(trees, treeIcons, () => `tree_${treeId++}`, 'drovosekdom');
 }
 
-export function spawnCornBatch(count=4, baseLat=55.75, baseLng=37.61){
-  if(!map) return;
-  for(let i=0;i<count;i++){
-    const lat = baseLat + (Math.random()-0.5)*0.01;
-    const lng = baseLng + (Math.random()-0.5)*0.01;
-    const icon = cornIcons[Math.floor(Math.random()*cornIcons.length)];
-    const marker = L.marker([lat,lng],{icon}).addTo(map);
-    corn.set(`corn_${cornId++}`, marker);
-  }
+export function spawnRocksBatch(){
+  spawnAroundAnchors(rocks, rockIcons, () => `rock_${rockId++}`, 'minehouse');
+}
+
+export function spawnCornBatch(){
+  spawnAroundAnchors(corn, cornIcons, () => `corn_${cornId++}`, 'fermerdom');
 }
