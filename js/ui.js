@@ -1,3 +1,6 @@
+// ===== Импорты ресурсов =====
+import { resources, updateResourcePanel } from './resources.js';
+
 // ===== Тосты =====
 const toasts = document.getElementById('toasts');
 export function showToast(html, actions=[] , timeoutMs=2000){
@@ -5,7 +8,6 @@ export function showToast(html, actions=[] , timeoutMs=2000){
   div.className = 'toast';
   div.innerHTML = html;
 
-  // кнопки-действия
   if (actions.length > 0) {
     const bar = document.createElement('div');
     bar.className = 'actions';
@@ -31,6 +33,13 @@ const marketCancel = document.getElementById('m-cancel');
 let selectedResource = "wood";
 let sellPacks = 0;
 
+// курсы обмена
+const marketRates = {
+  wood: 50,   // 10 дерева = 50 монет
+  stone: 70,  // 10 камня = 70 монет
+  corn: 40    // 10 кукурузы = 40 монет
+};
+
 export function openMarket(){ 
   overlay.style.display = 'block';
   marketMenu.style.display = 'block';
@@ -47,29 +56,61 @@ if (overlay) overlay.addEventListener('click', closeMarket);
 
 function updateMarketUI() {
   document.getElementById('m-packs').textContent = sellPacks;
-  let rate = 50; // пример: каждые 10 ресурсов = 50 монет
+  const have = resources[selectedResource] || 0;
+  const rate = marketRates[selectedResource] || 0;
+  document.getElementById('m-rate').textContent = `10 ${emoji(selectedResource)} = ${rate} 💰`;
+  document.getElementById('m-have').textContent = have;
   document.getElementById('m-get').textContent = sellPacks * rate;
-  document.getElementById('m-have').textContent = 999; // пока фиктивное значение
+}
+
+function emoji(res) {
+  if (res === "wood") return "🪵";
+  if (res === "stone") return "🪨";
+  if (res === "corn") return "🌽";
+  return res;
 }
 
 // вкладки ресурсов
-document.getElementById('tabWood').onclick = () => { selectedResource = "wood"; updateMarketUI(); };
-document.getElementById('tabStone').onclick = () => { selectedResource = "stone"; updateMarketUI(); };
-document.getElementById('tabCorn').onclick = () => { selectedResource = "corn"; updateMarketUI(); };
+document.getElementById('tabWood').onclick = () => { selectedResource = "wood"; sellPacks = 0; updateMarketUI(); };
+document.getElementById('tabStone').onclick = () => { selectedResource = "stone"; sellPacks = 0; updateMarketUI(); };
+document.getElementById('tabCorn').onclick = () => { selectedResource = "corn"; sellPacks = 0; updateMarketUI(); };
 
 // кнопки изменения количества
 document.getElementById('m-dec').onclick = () => { if (sellPacks > 0) sellPacks--; updateMarketUI(); };
-document.getElementById('m-inc').onclick = () => { sellPacks++; updateMarketUI(); };
-document.getElementById('m-max').onclick = () => { sellPacks = 99; updateMarketUI(); };
+document.getElementById('m-inc').onclick = () => { 
+  const have = Math.floor((resources[selectedResource] || 0) / 10);
+  if (sellPacks < have) sellPacks++;
+  updateMarketUI();
+};
+document.getElementById('m-max').onclick = () => { 
+  sellPacks = Math.floor((resources[selectedResource] || 0) / 10);
+  updateMarketUI();
+};
 
 // кнопки продажи
 document.getElementById('m-sell').onclick = () => { 
-  showToast(`Продано ${sellPacks*10} ${selectedResource}`); 
-  sellPacks = 0; updateMarketUI(); 
+  if (sellPacks <= 0) return;
+  const need = sellPacks * 10;
+  if (resources[selectedResource] >= need) {
+    resources[selectedResource] -= need;
+    resources.money += sellPacks * marketRates[selectedResource];
+    showToast(`Продано ${need} ${emoji(selectedResource)} за ${sellPacks * marketRates[selectedResource]} 💰`);
+    sellPacks = 0;
+    updateResourcePanel();
+    updateMarketUI();
+  }
 };
 document.getElementById('m-sell-all').onclick = () => { 
-  showToast(`Проданы все ${selectedResource}`); 
-  sellPacks = 0; updateMarketUI(); 
+  const have = Math.floor((resources[selectedResource] || 0) / 10);
+  if (have > 0) {
+    const need = have * 10;
+    resources[selectedResource] -= need;
+    resources.money += have * marketRates[selectedResource];
+    showToast(`Продано ${need} ${emoji(selectedResource)} за ${have * marketRates[selectedResource]} 💰`);
+    sellPacks = 0;
+    updateResourcePanel();
+    updateMarketUI();
+  }
 };
 
 // ===== Shop UI =====
@@ -93,9 +134,17 @@ buyButtons.forEach(btn => {
   btn.addEventListener('click', (e) => {
     const card = e.target.closest('.card');
     const type = card.dataset.type;
-    const cost = card.dataset.cost;
-    showToast(`Построено здание: ${type} за ${cost} 💰`);
-    closeShop();
+    const cost = parseInt(card.dataset.cost) || 0;
+
+    if (resources.money >= cost) {
+      resources.money -= cost;
+      updateResourcePanel();
+      showToast(`Куплено здание: ${type} за ${cost} 💰`);
+      closeShop();
+      // тут можно вызвать функцию, которая реально строит здание
+    } else {
+      showToast(`Недостаточно 💰 для покупки ${type}`);
+    }
   });
 });
 
