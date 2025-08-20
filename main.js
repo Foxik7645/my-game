@@ -1,4 +1,11 @@
-// main.js — redirect-only auth to avoid COOP popup issues
+// main.js — redirect-only auth + safe DOM guards
+
+/* tiny helpers */
+const $id = (id) => document.getElementById(id);
+const on = (el, evt, fn) => { if (el) el.addEventListener(evt, fn); };
+const setOnClick = (el, fn) => { if (el) el.onclick = fn; else console.warn('[UI] Missing element for onclick'); };
+const exists = (id, el) => { if (!el) console.warn(`[UI] #${id} not found`); return el;};
+
 /* ---------- Firebase ---------- */
 import {
   auth,
@@ -8,7 +15,6 @@ import {
   signOut,
   signInWithRedirect,
   getRedirectResult,
-  // signInWithPopup, // not used in redirect-only mode
   collection,
   addDoc,
   onSnapshot,
@@ -24,18 +30,18 @@ import {
 } from "./firebaseConfig.js";
 
 /* ---------- Auth UI ---------- */
-const loginBtn = document.getElementById('loginBtn');
-const logoutBtn = document.getElementById('logoutBtn');
-const userName = document.getElementById('userName');
-const profileBtn = document.getElementById('profileBtn');
-const profileOverlay = document.getElementById('profileOverlay');
-const profileMenu = document.getElementById('profileMenu');
-const avatarInput = document.getElementById('avatarInput');
-const profileNameInput = document.getElementById('profileName');
-const profileIdSpan = document.getElementById('profileId');
-const profileAvatarDiv = document.getElementById('profileAvatar');
-const profileSave = document.getElementById('profileSave');
-const profileCancel = document.getElementById('profileCancel');
+const loginBtn        = exists('loginBtn', $id('loginBtn'));
+const logoutBtn       = exists('logoutBtn', $id('logoutBtn'));
+const userName        = exists('userName', $id('userName'));
+const profileBtn      = exists('profileBtn', $id('profileBtn'));
+const profileOverlay  = exists('profileOverlay', $id('profileOverlay'));
+const profileMenu     = exists('profileMenu', $id('profileMenu'));
+const avatarInput     = exists('avatarInput', $id('avatarInput'));
+const profileNameInput= exists('profileName', $id('profileName'));
+const profileIdSpan   = exists('profileId', $id('profileId'));
+const profileAvatarDiv= exists('profileAvatar', $id('profileAvatar'));
+const profileSave     = exists('profileSave', $id('profileSave'));
+const profileCancel   = exists('profileCancel', $id('profileCancel'));
 
 const provider = new GoogleAuthProvider();
 
@@ -46,60 +52,60 @@ getRedirectResult(auth).catch(e => {
   }
 });
 
-// Вход **только через редирект** — без попапа, чтобы обойти COOP
-loginBtn.onclick = async () => {
+// Вход **только через редирект** — без попапа (COOP-safe)
+setOnClick(loginBtn, async () => {
   try {
     await signInWithRedirect(auth, provider);
   } catch (err) {
     showToast('Ошибка входа: ' + (err?.message || err), [], 3000);
   }
-};
+});
 
-logoutBtn.onclick = async () => { try{ await signOut(auth); }catch(e){} };
+setOnClick(logoutBtn, async () => { try{ await signOut(auth); }catch(e){} });
 
 function openProfile(){
   if(!uid) return;
-  profileOverlay.style.display='block';
-  profileMenu.style.display='block';
+  if (profileOverlay) profileOverlay.style.display='block';
+  if (profileMenu) profileMenu.style.display='block';
   avatarDraft='';
-  profileIdSpan.textContent = uid;
-  profileNameInput.value = profileNickname;
-  profileAvatarDiv.style.backgroundImage = profileAvatar?`url('${profileAvatar}')`:'';
-  avatarInput.value='';
+  if (profileIdSpan) profileIdSpan.textContent = uid;
+  if (profileNameInput) profileNameInput.value = profileNickname || '';
+  if (profileAvatarDiv) profileAvatarDiv.style.backgroundImage = profileAvatar?`url('${profileAvatar}')`:'';
+  if (avatarInput) avatarInput.value='';
 }
 function closeProfile(){
-  profileOverlay.style.display='none';
-  profileMenu.style.display='none';
-  avatarInput.value='';
+  if (profileOverlay) profileOverlay.style.display='none';
+  if (profileMenu) profileMenu.style.display='none';
+  if (avatarInput) avatarInput.value='';
 }
-profileBtn.onclick = openProfile;
-profileCancel.onclick = closeProfile;
-profileOverlay.onclick = closeProfile;
-avatarInput.onchange = e => {
-  const file = e.target.files[0];
+setOnClick(profileBtn, openProfile);
+setOnClick(profileCancel, closeProfile);
+if (profileOverlay) profileOverlay.onclick = closeProfile;
+if (avatarInput) avatarInput.onchange = e => {
+  const file = e.target.files?.[0];
   if(file){
     const reader = new FileReader();
     reader.onload = () => {
       avatarDraft = reader.result;
-      profileAvatarDiv.style.backgroundImage = `url('${avatarDraft}')`;
+      if (profileAvatarDiv) profileAvatarDiv.style.backgroundImage = `url('${avatarDraft}')`;
     };
     reader.readAsDataURL(file);
   }
 };
-profileSave.onclick = async () => {
+setOnClick(profileSave, async () => {
   if(!uid || !playerDocRef) return;
-  const newName = profileNameInput.value.trim() || 'Игрок';
+  const newName = (profileNameInput?.value?.trim()) || 'Игрок';
   const newAvatar = avatarDraft || profileAvatar;
   try{
     await updateDoc(playerDocRef, { nick: newName, avatar: newAvatar });
     profileNickname = newName; profileAvatar = newAvatar;
-    userName.textContent = profileNickname;
-    profileBtn.style.backgroundImage = profileAvatar?`url('${profileAvatar}')`:'';
+    if (userName) userName.textContent = profileNickname;
+    if (profileBtn) profileBtn.style.backgroundImage = profileAvatar?`url('${profileAvatar}')`:'';
     closeProfile();
   }catch(e){
     showToast('Ошибка сохранения профиля: ' + e.message, [], 2500);
   }
-};
+});
 
 let uid = null;
 let playerDocRef = null;
@@ -141,7 +147,9 @@ const SOLDIER_DURATION_MS = 2 * 60 * 1000;
 
 /* UI helpers */
 function updateResourcePanel(){
-  document.getElementById('resources').innerHTML = `
+  const res = $id('resources');
+  if(!res) return;
+  res.innerHTML = `
     <div class="res">💰 <b id="r-money">${resources.money}</b></div>
     <div class="res">🪵 <b id="r-wood">${resources.wood}</b></div>
     <div class="res">🪨 <b id="r-stone">${resources.stone}</b></div>
@@ -158,15 +166,16 @@ function addXP(amount){
     xp -= required; level++; required = getRequiredXp(level);
     showToast(`📈 Уровень ${level}!`,[],1500);
   }
-  document.querySelector('#xpText').textContent = `Lv ${level} • ${xp}/${required}`;
+  const tx = $id('xpText'); const fill = document.querySelector('#xpBar .fill');
+  if (tx) tx.textContent = `Lv ${level} • ${xp}/${required}`;
   const p = Math.max(0, Math.min(1, xp / required)) * 100;
-  document.querySelector('#xpBar .fill').style.width = p + '%';
+  if (fill) fill.style.width = p + '%';
   schedulePlayerSave();
 }
 addXP(0);
 
 /* ---------- Map ---------- */
-await new Promise(r => { if (window.L) r(); else window.addEventListener('load', r, {once:true}); });
+await new Promise(r => { if (window.L && document.readyState!=='loading') r(); else window.addEventListener('load', r, {once:true}); });
 const map = L.map('map').setView([55.751244,37.618423], 13);
 L.tileLayer('https://cartodb-basemaps-a.global.ssl.fastly.net/dark_nolabels/{z}/{x}/{y}{r}.png',
   { attribution: '©OpenStreetMap ©Carto', subdomains: 'abcd', maxZoom: 19 }).addTo(map);
@@ -198,9 +207,9 @@ const selectedMarkers=new Set();
 const otherBaseZones = new Map();
 const soldiers = new Set();
 
-const attackBtn = document.getElementById('attackBtn');
+const attackBtn = $id('attackBtn');
 let attackTargetOwner = null;
-attackBtn.onclick = () => {
+setOnClick(attackBtn, () => {
   const targets = [...buildingData.values()].filter(b=>b.type==='base' && b.owner!==uid);
   if(targets.length===0){ showToast('Нет целей для атаки',[],1500); return; }
   const options = targets.map(b=>b.owner).join('\n');
@@ -208,7 +217,7 @@ attackBtn.onclick = () => {
   const tgt = targets.find(b=>b.owner===pick);
   if(tgt){ attackTargetOwner = tgt.owner; showToast('Цель выбрана!',[],1200); }
   else showToast('Игрок не найден',[],1500);
-};
+});
 
 let baseMarker=null, baseZone=null;
 let baseMeta={ level:0, color:'#00ffcc', poly:{angles:[], radii:[]} };
@@ -491,9 +500,9 @@ function startRealtime(){
       profileAvatar = d.avatar || auth.currentUser?.photoURL || '';
       updateResourcePanel();
       addXP(0);
-      userName.textContent = profileNickname;
-      profileBtn.style.backgroundImage = profileAvatar?`url('${profileAvatar}')`:'';
-      profileBtn.style.display = 'inline-block';
+      if (userName) userName.textContent = profileNickname;
+      if (profileBtn) profileBtn.style.backgroundImage = profileAvatar?`url('${profileAvatar}')`:'';
+      if (profileBtn) profileBtn.style.display = 'inline-block';
     } else {
       ensurePlayerDoc();
     }
@@ -947,65 +956,76 @@ function moveTowards(marker, pos, target, s, dt){
 }
 
 /* ---------- Market ---------- */
-const overlay = document.getElementById('overlay');
-const marketMenu = document.getElementById('marketMenu');
-const marketBtn = document.getElementById('marketBtn');
-const tabWood = document.getElementById('tabWood');
-const tabStone = document.getElementById('tabStone');
-const tabCorn = document.getElementById('tabCorn');
-const mRate = document.getElementById('m-rate');
-const mHave = document.getElementById('m-have');
-const mPacks= document.getElementById('m-packs');
-const mGet = document.getElementById('m-get');
-const mDec = document.getElementById('m-dec');
-const mInc = document.getElementById('m-inc');
-const mMax = document.getElementById('m-max');
-const mSell = document.getElementById('m-sell');
-const mCancel=document.getElementById('m-cancel');
-const mSellAll = document.getElementById('m-sell-all');
+const overlay    = exists('overlay', $id('overlay'));
+const marketMenu = exists('marketMenu', $id('marketMenu'));
+const marketBtn  = exists('marketBtn', $id('marketBtn'));
+const tabWood    = exists('tabWood', $id('tabWood'));
+const tabStone   = exists('tabStone', $id('tabStone'));
+const tabCorn    = exists('tabCorn', $id('tabCorn'));
+const mRate      = exists('m-rate', $id('m-rate'));
+const mHave      = exists('m-have', $id('m-have'));
+const mPacks     = exists('m-packs', $id('m-packs'));
+const mGet       = exists('m-get', $id('m-get'));
+const mDec       = exists('m-dec', $id('m-dec'));
+const mInc       = exists('m-inc', $id('m-inc'));
+const mMax       = exists('m-max', $id('m-max'));
+const mSell      = exists('m-sell', $id('m-sell'));
+const mCancel    = exists('m-cancel', $id('m-cancel'));
+const mSellAll   = exists('m-sell-all', $id('m-sell-all'));
+
 const WOOD_PER_PACK = 10, WOOD_PRICE = 50;
 const STONE_PER_PACK = 10, STONE_PRICE = 150;
 const CORN_PER_PACK = 10, CORN_PRICE = 150;
 let marketResource = 'wood';
-function openMarket(){ overlay.style.display='block'; marketMenu.style.display='block'; setMarketResource(marketResource); updateMarketUI(0,true); }
-function closeMarket(){ overlay.style.display='none'; marketMenu.style.display='none'; }
-marketBtn.onclick = openMarket;
-overlay.onclick = closeMarket; mCancel.onclick = closeMarket;
+function openMarket(){ if(overlay) overlay.style.display='block'; if(marketMenu) marketMenu.style.display='block'; setMarketResource(marketResource); updateMarketUI(0,true); }
+function closeMarket(){ if(overlay) overlay.style.display='none'; if(marketMenu) marketMenu.style.display='none'; }
+setOnClick(marketBtn, openMarket);
+if (overlay) overlay.onclick = closeMarket;
+setOnClick(mCancel, closeMarket);
 function setMarketResource(res){
   marketResource = res;
-  tabWood.classList.toggle('active', res==='wood');
-  tabStone.classList.toggle('active', res==='stone');
-  tabCorn.classList.toggle('active', res==='corn');
-  if(res==='wood'){ mRate.textContent = '10 🪵 = 50 💰'; mHave.textContent = resources.wood; }
-  else if(res==='stone'){ mRate.textContent = '10 🪨 = 150 💰'; mHave.textContent = resources.stone; }
-  else { mRate.textContent = '10 🌽 = 150 💰'; mHave.textContent = resources.corn; }
+  if (tabWood)  tabWood.classList.toggle('active', res==='wood');
+  if (tabStone) tabStone.classList.toggle('active', res==='stone');
+  if (tabCorn)  tabCorn.classList.toggle('active', res==='corn');
+  if(mRate && mHave){
+    if(res==='wood'){ mRate.textContent = '10 🪵 = 50 💰'; mHave.textContent = resources.wood; }
+    else if(res==='stone'){ mRate.textContent = '10 🪨 = 150 💰'; mHave.textContent = resources.stone; }
+    else { mRate.textContent = '10 🌽 = 150 💰'; mHave.textContent = resources.corn; }
+  }
   updateMarketUI(0,true);
 }
-tabWood.onclick = ()=>setMarketResource('wood');
-tabStone.onclick= ()=>setMarketResource('stone');
-tabCorn.onclick = ()=>setMarketResource('corn');
+setOnClick(tabWood,  ()=>setMarketResource('wood'));
+setOnClick(tabStone, ()=>setMarketResource('stone'));
+setOnClick(tabCorn,  ()=>setMarketResource('corn'));
 function maxPacks(){ return marketResource==='wood'?Math.floor(resources.wood/WOOD_PER_PACK):marketResource==='stone'?Math.floor(resources.stone/STONE_PER_PACK):Math.floor(resources.corn/CORN_PER_PACK); }
 function priceFor(packs){ return marketResource==='wood'?packs*WOOD_PRICE:marketResource==='stone'?packs*STONE_PRICE:packs*CORN_PRICE; }
-function updateMarketUI(packs, clamp=false){ const mx=maxPacks(); if(clamp) packs=Math.max(0, Math.min(mx, packs)); mHave.textContent = marketResource==='wood'?resources.wood:marketResource==='stone'?resources.stone:resources.corn; mPacks.textContent=packs; mPacks.dataset.value=packs; mGet.textContent=priceFor(packs); }
-function getPacks(){ return parseInt(mPacks.dataset.value||'0',10); }
-mDec.onclick = ()=>updateMarketUI(getPacks()-1,true);
-mInc.onclick = ()=>updateMarketUI(getPacks()+1,true);
-mMax.onclick = ()=>updateMarketUI(9999,true);
-mSell.onclick = async ()=>{
+function updateMarketUI(packs, clamp=false){
+  const mx=maxPacks(); if(clamp) packs=Math.max(0, Math.min(mx, packs));
+  if (mHave) mHave.textContent = marketResource==='wood'?resources.wood:marketResource==='stone'?resources.stone:resources.corn;
+  if (mPacks){ mPacks.textContent=packs; mPacks.dataset.value=String(packs); }
+  if (mGet) mGet.textContent=priceFor(packs);
+}
+function getPacks(){ return parseInt(mPacks?.dataset?.value||'0',10); }
+setOnClick(mDec, ()=>updateMarketUI(getPacks()-1,true));
+setOnClick(mInc, ()=>updateMarketUI(getPacks()+1,true));
+setOnClick(mMax, ()=>updateMarketUI(9999,true));
+setOnClick(mSell, async ()=>{
   const packs = getPacks(); if(packs<=0) return;
   if(marketResource==='wood'){ const need=packs*WOOD_PER_PACK; if(resources.wood<need) return showToast('Недостаточно дерева',[],1500); resources.wood-=need; resources.money+=packs*WOOD_PRICE; }
   else if(marketResource==='stone'){ const need=packs*STONE_PER_PACK; if(resources.stone<need) return showToast('Недостаточно камня',[],1500); resources.stone-=need; resources.money+=packs*STONE_PRICE; }
   else { const need=packs*CORN_PER_PACK; if(resources.corn<need) return showToast('Недостаточно кукурузы',[],1500); resources.corn-=need; resources.money+=packs*CORN_PRICE; }
   updateResourcePanel(); schedulePlayerSave(); closeMarket();
   showToast('Сделка совершена!',[],1200);
-};
-mSellAll.onclick = () => { updateMarketUI(maxPacks(), true); mSell.click(); };
+});
+setOnClick(mSellAll, () => { updateMarketUI(maxPacks(), true); if (mSell) mSell.click(); });
 
 /* ---------- Placement / Shop ---------- */
-const shopPanel = document.getElementById('shopPanel');
-document.getElementById('shopToggle').onclick = ()=> shopPanel.style.display = (shopPanel.style.display==='block'?'none':'block');
-document.getElementById('shopClose').onclick = ()=> shopPanel.style.display = 'none';
-shopPanel.querySelectorAll('.card').forEach(card=>{
+const shopPanel   = exists('shopPanel', $id('shopPanel'));
+const shopToggle  = exists('shopToggle', $id('shopToggle'));
+const shopClose   = exists('shopClose', $id('shopClose'));
+setOnClick(shopToggle, ()=> { if (shopPanel) shopPanel.style.display = (shopPanel.style.display==='block'?'none':'block'); });
+setOnClick(shopClose, ()=> { if (shopPanel) shopPanel.style.display='none'; });
+if (shopPanel) shopPanel.querySelectorAll('.card').forEach(card=>{
   card.addEventListener('click', (e)=>{
     shopPanel.querySelectorAll('.card').forEach(c=>{ if(c!==card) c.classList.remove('active'); });
     card.classList.toggle('active'); e.stopPropagation();
@@ -1033,7 +1053,7 @@ function pointInsideBase(latlng){
   return pointInPolygon(latlng, pts);
 }
 
-shopPanel.querySelectorAll('.buyBtn').forEach(btn=>{
+if (shopPanel) shopPanel.querySelectorAll('.buyBtn').forEach(btn=>{
   btn.addEventListener('click', (e)=>{
     e.stopPropagation();
     const card = btn.closest('.card');
@@ -1042,7 +1062,7 @@ shopPanel.querySelectorAll('.buyBtn').forEach(btn=>{
     if(resources.money < bp.cost){ showToast('Недостаточно денег.',[],1500); return; }
     placementMode = { active:true, blueprint:bp };
     makeGhostForBlueprint(bp);
-    shopPanel.style.display='none';
+    if (shopPanel) shopPanel.style.display='none';
     showToast('Выберите место в зоне базы и кликните.',[],1800);
   });
 });
@@ -1214,26 +1234,35 @@ document.addEventListener('keydown', e=>{
 });
 
 /* ---------- Редактор спрайта ---------- */
-const editMenu=document.getElementById('editMenu');
-const canvas=document.getElementById('paintCanvas');
-const ctx=canvas.getContext('2d');
-const paletteDiv=document.getElementById('palette');
-const closeEditorBtn=document.getElementById('closeEditor');
-const canvasInfo=document.getElementById('canvasInfo');
+const editMenu=$id('editMenu');
+const canvas=$id('paintCanvas');
+const ctx=canvas?.getContext?.('2d');
+const paletteDiv=$id('palette');
+const closeEditorBtn=$id('closeEditor');
+const canvasInfo=$id('canvasInfo');
 let editingMarker=null, logicalSize=60;
 const colors=['#000','#fff','#ff0000','#00ff00','#0000ff','#ffff00','#00ffff','#ff00ff','#888','#444','#ccc','#fa0','#0af','#f0a','#aaa','#555','#222','#111','#333','#666','#999','#b00','#0b0','#00b','#bb0','#0bb','#b0b'];
 let currentColor=colors[0];
-function setCanvasLogicalSize(s){ logicalSize=s; canvas.width=s; canvas.height=s; canvasInfo.textContent=`Логическое разрешение: ${s}×${s}`; ctx.imageSmoothingEnabled=false; }
-function drawPixel(x,y){ctx.fillStyle=currentColor; ctx.fillRect(x,y,1,1);}
-canvas.addEventListener('mousedown', e=>{
+function setCanvasLogicalSize(s){
+  logicalSize=s;
+  if(!canvas||!ctx) return;
+  canvas.width=s; canvas.height=s;
+  if (canvasInfo) canvasInfo.textContent=`Логическое разрешение: ${s}×${s}`;
+  ctx.imageSmoothingEnabled=false;
+}
+function drawPixel(x,y){ if(!ctx) return; ctx.fillStyle=currentColor; ctx.fillRect(x,y,1,1); }
+if (canvas) canvas.addEventListener('mousedown', e=>{
   const r=canvas.getBoundingClientRect(); const x=Math.floor((e.clientX-r.left)*logicalSize/r.width); const y=Math.floor((e.clientY-r.top)*logicalSize/r.height);
   const drag=(ev)=>{ const rr=canvas.getBoundingClientRect(); const xx=Math.floor((ev.clientX-rr.left)*logicalSize/rr.width); const yy=Math.floor((ev.clientY-rr.top)*logicalSize/rr.height); drawPixel(xx,yy); };
   const up=()=>{document.removeEventListener('mousemove',drag); document.removeEventListener('mouseup',up);};
   drawPixel(x,y); document.addEventListener('mousemove',drag); document.addEventListener('mouseup',up);
 });
-paletteDiv.innerHTML=''; colors.forEach(c=>{const d=document.createElement('div'); d.className='colorTile'; d.style.background=c; d.onclick=()=>currentColor=c; paletteDiv.appendChild(d);});
+if (paletteDiv){
+  paletteDiv.innerHTML='';
+  colors.forEach(c=>{const d=document.createElement('div'); d.className='colorTile'; d.style.background=c; d.onclick=()=>currentColor=c; paletteDiv.appendChild(d);});
+}
 window.editBuilding = function(id){
-  const m=markers.get(id); if(!m) return; editingMarker=m; editMenu.style.display='flex';
+  const m=markers.get(id); if(!m) return; editingMarker=m; if (editMenu) editMenu.style.display='flex';
   const b=buildingData.get(id);
   let size;
   if(b.type==='base') size = BASE_LEVELS[b.level].paint;
@@ -1247,19 +1276,22 @@ window.editBuilding = function(id){
     size = table[b.level].paint;
   }
   setCanvasLogicalSize(size);
-  const img=new Image(); img.crossOrigin='anonymous'; img.src=m.currentIcon; img.onload=()=>{ ctx.clearRect(0,0,logicalSize,logicalSize); ctx.drawImage(img,0,0,logicalSize,logicalSize); };
+  const img=new Image(); img.crossOrigin='anonymous'; img.src=m.currentIcon; img.onload=()=>{
+    if(!ctx) return;
+    ctx.clearRect(0,0,logicalSize,logicalSize); ctx.drawImage(img,0,0,logicalSize,logicalSize);
+  };
 };
-document.getElementById('saveSprite').onclick= async ()=>{
-  if(!editingMarker) return;
+setOnClick($id('saveSprite'), async ()=>{
+  if(!editingMarker || !canvas) return;
   const id = editingMarker.options.buildingId; const b=buildingData.get(id);
   const dataUrl=canvas.toDataURL();
   const spec = iconSpecForType(b?.type||'', b?.level||1);
   editingMarker.setIcon(new L.Icon({iconUrl:dataUrl, iconSize:spec.size, iconAnchor:spec.anchor}));
   editingMarker.currentIcon=dataUrl; editingMarker.bindPopup(makePopupHtml(b));
-  editMenu.style.display='none'; editingMarker=null;
+  if (editMenu) editMenu.style.display='none'; editingMarker=null;
   try { await updateDoc(doc(db, 'buildings', id), { customIcon: dataUrl }); } catch (e) {}
-};
-closeEditorBtn.onclick=()=>{ editMenu.style.display='none'; editingMarker=null; };
+});
+setOnClick(closeEditorBtn, ()=>{ if (editMenu) editMenu.style.display='none'; editingMarker=null; });
 
 /* ---------- init ---------- */
 spawnTreesBatch(); spawnRocksBatch(); spawnCornBatch();
@@ -1269,14 +1301,15 @@ setInterval(spawnCornBatch, CORN_SPAWN_INTERVAL_MS);
 requestAnimationFrame(moveWorkers);
 
 /* ---------- Тосты ---------- */
-const toasts=document.getElementById('toasts');
+const toasts=$id('toasts');
 function showToast(html, actions=[] , timeoutMs=0){
   const t=document.createElement('div'); t.className='toast'; t.innerHTML=html;
   if(actions.length){ const row=document.createElement('div'); row.className='actions';
-    actions.forEach(a=>{ const btn=document.createElement('button'); btn.textContent=a.text; btn.onclick=()=>{ try{a.onClick?.();} finally{toasts.removeChild(t);} }; row.appendChild(btn); });
+    actions.forEach(a=>{ const btn=document.createElement('button'); btn.textContent=a.text; btn.onclick=()=>{ try{a.onClick?.();} finally{t.remove();} }; row.appendChild(btn); });
     t.appendChild(row);
   }
-  toasts.appendChild(t); if(timeoutMs>0){ setTimeout(()=>{ if(t.parentNode) toasts.removeChild(t); }, timeoutMs); }
+  (toasts||document.body).appendChild(t);
+  if(timeoutMs>0){ setTimeout(()=>{ t.remove(); }, timeoutMs); }
 }
 
 /* ---------- auth ---------- */
@@ -1285,23 +1318,20 @@ onAuthStateChanged(auth, async user => {
     uid = user.uid;
     profileNickname = user.displayName || user.email || 'Player';
     profileAvatar = user.photoURL || '';
-    userName.textContent = profileNickname;
-    profileBtn.style.backgroundImage = profileAvatar?`url('${profileAvatar}')`:'';
-    profileBtn.style.display = 'inline-block';
-    loginBtn.style.display='inline-block';
-    loginBtn.textContent = 'Сменить аккаунт';
-    logoutBtn.style.display='inline-block';
+    if (userName) userName.textContent = profileNickname;
+    if (profileBtn) { profileBtn.style.backgroundImage = profileAvatar?`url('${profileAvatar}')`:''; profileBtn.style.display = 'inline-block'; }
+    if (loginBtn){ loginBtn.style.display='inline-block'; loginBtn.textContent = 'Сменить аккаунт'; }
+    if (logoutBtn) logoutBtn.style.display='inline-block';
     playerDocRef = doc(db, 'players', uid);
     await ensurePlayerDoc();
     startRealtime();
   } else {
     uid = null;
-    userName.textContent = '';
-    loginBtn.textContent = 'Войти с Google';
-    logoutBtn.style.display='none';
-     profileBtn.style.display='none';
-     profileBtn.style.backgroundImage='';
-     profileNickname=''; profileAvatar='';
+    if (userName) userName.textContent = '';
+    if (loginBtn) loginBtn.textContent = 'Войти с Google';
+    if (logoutBtn) logoutBtn.style.display='none';
+    if (profileBtn){ profileBtn.style.display='none'; profileBtn.style.backgroundImage=''; }
+    profileNickname=''; profileAvatar='';
     buildingsUnsub?.(); playerUnsub?.(); workersUnsub?.();
     buildingsUnsub = playerUnsub = workersUnsub = null;
 
