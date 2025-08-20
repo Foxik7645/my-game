@@ -5,14 +5,70 @@ import { auth, db, GoogleAuthProvider, signInWithPopup, onAuthStateChanged, sign
 const loginBtn = document.getElementById('loginBtn');
 const logoutBtn = document.getElementById('logoutBtn');
 const userName = document.getElementById('userName');
+const profileBtn = document.getElementById('profileBtn');
+const profileOverlay = document.getElementById('profileOverlay');
+const profileMenu = document.getElementById('profileMenu');
+const avatarInput = document.getElementById('avatarInput');
+const profileNameInput = document.getElementById('profileName');
+const profileIdSpan = document.getElementById('profileId');
+const profileAvatarDiv = document.getElementById('profileAvatar');
+const profileSave = document.getElementById('profileSave');
+const profileCancel = document.getElementById('profileCancel');
 loginBtn.onclick = async () => {
   try { await signInWithPopup(auth, new GoogleAuthProvider()); }
   catch (e) { showToast('Ошибка входа: ' + (e?.message||e), [], 2500); }
 };
 logoutBtn.onclick = async () => { try{ await signOut(auth); }catch(e){} };
 
+function openProfile(){
+  if(!uid) return;
+  profileOverlay.style.display='block';
+  profileMenu.style.display='block';
+  avatarDraft='';
+  profileIdSpan.textContent = uid;
+  profileNameInput.value = profileNickname;
+  profileAvatarDiv.style.backgroundImage = profileAvatar?`url('${profileAvatar}')`:'';
+  avatarInput.value='';
+}
+function closeProfile(){
+  profileOverlay.style.display='none';
+  profileMenu.style.display='none';
+  avatarInput.value='';
+}
+profileBtn.onclick = openProfile;
+profileCancel.onclick = closeProfile;
+profileOverlay.onclick = closeProfile;
+avatarInput.onchange = e => {
+  const file = e.target.files[0];
+  if(file){
+    const reader = new FileReader();
+    reader.onload = () => {
+      avatarDraft = reader.result;
+      profileAvatarDiv.style.backgroundImage = `url('${avatarDraft}')`;
+    };
+    reader.readAsDataURL(file);
+  }
+};
+profileSave.onclick = async () => {
+  if(!uid || !playerDocRef) return;
+  const newName = profileNameInput.value.trim() || 'Игрок';
+  const newAvatar = avatarDraft || profileAvatar;
+  try{
+    await updateDoc(playerDocRef, { nick: newName, avatar: newAvatar });
+    profileNickname = newName; profileAvatar = newAvatar;
+    userName.textContent = profileNickname;
+    profileBtn.style.backgroundImage = profileAvatar?`url('${profileAvatar}')`:'';
+    closeProfile();
+  }catch(e){
+    showToast('Ошибка сохранения профиля: ' + e.message, [], 2500);
+  }
+};
+
 let uid = null;
 let playerDocRef = null;
+let profileAvatar = '';
+let profileNickname = '';
+let avatarDraft = '';
 
 /* ---------- State ---------- */
 const BASE_XP = 500;
@@ -394,8 +450,13 @@ function startRealtime(){
       resources.food  = d.food  ?? 30;
       level = d.level ?? 1;
       xp    = d.xp    ?? 0;
+      profileNickname = d.nick || auth.currentUser?.displayName || 'Player';
+      profileAvatar = d.avatar || auth.currentUser?.photoURL || '';
       updateResourcePanel();
       addXP(0);
+      userName.textContent = profileNickname;
+      profileBtn.style.backgroundImage = profileAvatar?`url('${profileAvatar}')`:'';
+      profileBtn.style.display = 'inline-block';
     } else {
       ensurePlayerDoc();
     }
@@ -428,7 +489,9 @@ async function ensurePlayerDoc(){
     if(!s.exists()){
       await setDoc(playerDocRef, {
         money: 100, wood: 10, stone: 0, corn: 0, food: 30,
-        level: 1, xp: 0, createdAt: serverTimestamp()
+        level: 1, xp: 0, createdAt: serverTimestamp(),
+        nick: auth.currentUser?.displayName || 'Player',
+        avatar: auth.currentUser?.photoURL || ''
       });
     }
   } catch (e) {
@@ -1183,7 +1246,11 @@ function showToast(html, actions=[] , timeoutMs=0){
 onAuthStateChanged(auth, async user => {
   if(user){
     uid = user.uid;
-    userName.textContent = user.displayName || user.email || 'Player';
+    profileNickname = user.displayName || user.email || 'Player';
+    profileAvatar = user.photoURL || '';
+    userName.textContent = profileNickname;
+    profileBtn.style.backgroundImage = profileAvatar?`url('${profileAvatar}')`:'';
+    profileBtn.style.display = 'inline-block';
     loginBtn.style.display='inline-block';
     loginBtn.textContent = 'Сменить аккаунт';
     logoutBtn.style.display='inline-block';
@@ -1195,6 +1262,9 @@ onAuthStateChanged(auth, async user => {
     userName.textContent = '';
     loginBtn.textContent = 'Войти с Google';
     logoutBtn.style.display='none';
+     profileBtn.style.display='none';
+     profileBtn.style.backgroundImage='';
+     profileNickname=''; profileAvatar='';
     buildingsUnsub?.(); playerUnsub?.(); workersUnsub?.();
     buildingsUnsub = playerUnsub = workersUnsub = null;
 
