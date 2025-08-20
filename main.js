@@ -1,4 +1,4 @@
-// main.js (COOP-safe auth; popup when possible, otherwise redirect)
+// main.js — redirect-only auth to avoid COOP popup issues
 /* ---------- Firebase ---------- */
 import {
   auth,
@@ -8,7 +8,7 @@ import {
   signOut,
   signInWithRedirect,
   getRedirectResult,
-  signInWithPopup,
+  // signInWithPopup, // not used in redirect-only mode
   collection,
   addDoc,
   onSnapshot,
@@ -37,8 +37,6 @@ const profileAvatarDiv = document.getElementById('profileAvatar');
 const profileSave = document.getElementById('profileSave');
 const profileCancel = document.getElementById('profileCancel');
 
-// Provider (можно включить выбор аккаунта)
-// const provider = new GoogleAuthProvider().setCustomParameters({ prompt: "select_account" });
 const provider = new GoogleAuthProvider();
 
 // Обработка результатов редиректа (если он был)
@@ -48,36 +46,12 @@ getRedirectResult(auth).catch(e => {
   }
 });
 
-// Унифицированный вход: если страница cross-origin isolated (COOP: same-origin + COEP),
-// попапы работать не будут — сразу уходим в redirect.
+// Вход **только через редирект** — без попапа, чтобы обойти COOP
 loginBtn.onclick = async () => {
   try {
-    if (window.crossOriginIsolated) {
-      await signInWithRedirect(auth, provider);
-      return;
-    }
-    // 1) пробуем popup
-    await signInWithPopup(auth, provider);
+    await signInWithRedirect(auth, provider);
   } catch (err) {
-    const code = err?.code || '';
-    const shouldFallbackToRedirect =
-      code === 'auth/popup-blocked' ||
-      code === 'auth/popup-closed-by-user' ||
-      code === 'auth/cancelled-popup-request' ||
-      code === 'auth/operation-not-supported-in-this-environment' ||
-      // На некоторых конфигурациях COOP/COEP Firebase кидает общий operation-not-supported
-      /popup|opener|close/i.test(err?.message || '');
-
-    if (shouldFallbackToRedirect) {
-      try {
-        await signInWithRedirect(auth, provider);
-        return;
-      } catch (e2) {
-        showToast('Ошибка входа (redirect): ' + (e2?.message || e2), [], 3000);
-      }
-    } else {
-      showToast('Ошибка входа: ' + (err?.message || err), [], 3000);
-    }
+    showToast('Ошибка входа: ' + (err?.message || err), [], 3000);
   }
 };
 
