@@ -3,7 +3,6 @@ import {
   auth,
   db,
   GoogleAuthProvider,
-  signInWithPopup,
   onAuthStateChanged,
   signOut,
   signInWithRedirect,
@@ -43,13 +42,9 @@ getRedirectResult(auth).catch(e => {
 });
 loginBtn.onclick = async () => {
   try {
-    await signInWithPopup(auth, provider);
-  } catch (e) {
-    try {
-      await signInWithRedirect(auth, provider);
-    } catch (err) {
-      showToast('Ошибка входа: ' + (err?.message || err), [], 2500);
-    }
+    await signInWithRedirect(auth, provider);
+  } catch (err) {
+    showToast('Ошибка входа: ' + (err?.message || err), [], 2500);
   }
 };
 logoutBtn.onclick = async () => { try{ await signOut(auth); }catch(e){} };
