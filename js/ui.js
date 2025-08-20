@@ -1,139 +1,115 @@
-// ===== Импорты =====
-import { db } from './main.js';
-import { collection, addDoc, serverTimestamp } from "https://www.gstatic.com/firebasejs/11.0.1/firebase-firestore.js";
-import { resources, updateResourcePanel } from './resources.js';
-import { map } from './map.js';
+// ===== Импорты Firebase =====
+import { getStorage, ref, uploadString, getDownloadURL } from "https://www.gstatic.com/firebasejs/11.0.1/firebase-storage.js";
+import { getFirestore, doc, updateDoc } from "https://www.gstatic.com/firebasejs/11.0.1/firebase-firestore.js";
+import { app } from "./main.js";   // экспортируй app в main.js -> export { app };
+
+const storage = getStorage(app);
+const db = getFirestore(app);
 
 // ===== Тосты =====
 const toasts = document.getElementById('toasts');
-export function showToast(html, actions=[] , timeoutMs=2000){
+export function showToast(html, actions = [], timeoutMs = 2000) {
   const div = document.createElement('div');
-  div.className = 'toast';
+  div.className = 'toast pixel';
   div.innerHTML = html;
-  if (actions.length > 0) {
-    const bar = document.createElement('div');
-    bar.className = 'actions';
-    actions.forEach(act => {
-      const btn = document.createElement('button');
-      btn.textContent = act.label;
-      btn.onclick = act.onClick;
-      bar.appendChild(btn);
-    });
-    div.appendChild(bar);
-  }
+
+  const btns = document.createElement('div');
+  btns.className = 'actions';
+  actions.forEach(([label, fn]) => {
+    const b = document.createElement('button');
+    b.textContent = label;
+    b.onclick = () => { fn(); div.remove(); };
+    btns.appendChild(b);
+  });
+  div.appendChild(btns);
   toasts.appendChild(div);
-  if (timeoutMs > 0) setTimeout(() => div.remove(), timeoutMs);
+
+  setTimeout(() => div.remove(), timeoutMs);
 }
 
 // ===== Market UI =====
 const overlay = document.getElementById('overlay');
 const marketMenu = document.getElementById('marketMenu');
 const marketBtn = document.getElementById('marketBtn');
-const marketCancel = document.getElementById('m-cancel');
+const mCancel = document.getElementById('m-cancel');
 
-let selectedResource = "wood";
-let sellPacks = 0;
-
-const marketRates = { wood: 50, stone: 70, corn: 40 };
-
-export function openMarket(){ overlay.style.display = 'block'; marketMenu.style.display = 'block'; updateMarketUI(); }
-export function closeMarket(){ overlay.style.display = 'none'; marketMenu.style.display = 'none'; }
-
-if (marketBtn) marketBtn.addEventListener('click', openMarket);
-if (marketCancel) marketCancel.addEventListener('click', closeMarket);
-if (overlay) overlay.addEventListener('click', closeMarket);
-
-function emoji(res){ if(res==="wood") return "🪵"; if(res==="stone") return "🪨"; if(res==="corn") return "🌽"; return res; }
-
-function updateMarketUI(){
-  const have = resources[selectedResource] || 0;
-  const rate = marketRates[selectedResource] || 0;
-  document.getElementById('m-packs').textContent = `${sellPacks} (${sellPacks*10} ${emoji(selectedResource)})`;
-  document.getElementById('m-rate').textContent = `10 ${emoji(selectedResource)} = ${rate} 💰`;
-  document.getElementById('m-have').textContent = have;
-  document.getElementById('m-get').textContent = sellPacks * rate;
+export function openMarket() {
+  overlay.style.display = 'block';
+  marketMenu.style.display = 'block';
+}
+export function closeMarket() {
+  overlay.style.display = 'none';
+  marketMenu.style.display = 'none';
 }
 
-document.getElementById('tabWood').onclick = () => { selectedResource="wood"; sellPacks=0; updateMarketUI(); };
-document.getElementById('tabStone').onclick = () => { selectedResource="stone"; sellPacks=0; updateMarketUI(); };
-document.getElementById('tabCorn').onclick = () => { selectedResource="corn"; sellPacks=0; updateMarketUI(); };
-
-document.getElementById('m-dec').onclick = () => { if(sellPacks>0) sellPacks--; updateMarketUI(); };
-document.getElementById('m-inc').onclick = () => { const max=Math.floor((resources[selectedResource]||0)/10); if(sellPacks<max) sellPacks++; updateMarketUI(); };
-document.getElementById('m-max').onclick = () => { sellPacks=Math.floor((resources[selectedResource]||0)/10); updateMarketUI(); };
-
-document.getElementById('m-sell').onclick = () => {
-  if(sellPacks<=0) return;
-  const need=sellPacks*10;
-  if(resources[selectedResource]>=need){
-    resources[selectedResource]-=need;
-    resources.money+=sellPacks*marketRates[selectedResource];
-    showToast(`Продано ${need} ${emoji(selectedResource)} за ${sellPacks*marketRates[selectedResource]} 💰`);
-    sellPacks=0; updateResourcePanel(); updateMarketUI();
-  }
-};
-document.getElementById('m-sell-all').onclick = () => {
-  const max=Math.floor((resources[selectedResource]||0)/10);
-  if(max>0){
-    const need=max*10;
-    resources[selectedResource]-=need;
-    resources.money+=max*marketRates[selectedResource];
-    showToast(`Продано ${need} ${emoji(selectedResource)} за ${max*marketRates[selectedResource]} 💰`);
-    sellPacks=0; updateResourcePanel(); updateMarketUI();
-  }
-};
+marketBtn.onclick = openMarket;
+mCancel.onclick = closeMarket;
 
 // ===== Shop UI =====
-const shopPanel=document.getElementById('shopPanel');
-const shopToggle=document.getElementById('shopToggle');
-const shopClose=document.getElementById('shopClose');
+const shopPanel = document.getElementById('shopPanel');
+const shopToggle = document.getElementById('shopToggle');
+const shopClose = document.getElementById('shopClose');
 
-export function openShop(){ shopPanel.style.display='block'; shopPanel.style.zIndex=1000; }
-export function closeShop(){ shopPanel.style.display='none'; }
-
-if(shopToggle) shopToggle.addEventListener('click',openShop);
-if(shopClose) shopClose.addEventListener('click',closeShop);
-
-// ===== Placement =====
-let placementMode=null;
-let ghostMarker=null;
-
-function startPlacement(type,cost,name,iconUrl){
-  if(resources.money<cost){ showToast("Недостаточно 💰"); return; }
-  closeShop();
-  placementMode={type,cost,name,iconUrl};
-  const icon=L.icon({iconUrl,iconSize:[32,32]});
-  ghostMarker=L.marker(map.getCenter(),{icon,opacity:0.6}).addTo(map);
-  map.on('mousemove',moveGhost); map.on('click',placeBuilding);
+export function openShop() {
+  shopPanel.style.display = 'block';
+}
+export function closeShop() {
+  shopPanel.style.display = 'none';
 }
 
-function moveGhost(e){ if(ghostMarker) ghostMarker.setLatLng(e.latlng); }
+shopToggle.onclick = openShop;
+shopClose.onclick = closeShop;
 
-async function placeBuilding(e){
-  if(!placementMode) return;
-  const {type,cost,name,iconUrl}=placementMode;
-  resources.money-=cost; updateResourcePanel();
-  await addDoc(collection(db,"buildings"),{
-    type,name,iconUrl,lat:e.latlng.lat,lng:e.latlng.lng,createdAt:serverTimestamp()
-  });
-  showToast(`Поставлено здание: ${name}`);
-  map.off('mousemove',moveGhost); map.off('click',placeBuilding);
-  if(ghostMarker) map.removeLayer(ghostMarker);
-  placementMode=null; ghostMarker=null;
+// ===== Editor спрайта =====
+const editMenu = document.getElementById('editMenu');
+const paintCanvas = document.getElementById('paintCanvas');
+const saveSpriteBtn = document.getElementById('saveSprite');
+const closeEditorBtn = document.getElementById('closeEditor');
+let currentBuildingId = null;
+
+const ctx = paintCanvas.getContext("2d");
+ctx.imageSmoothingEnabled = false;
+
+// Открыть редактор
+export function editBuilding(id) {
+  currentBuildingId = id;
+  editMenu.style.display = "block";
 }
 
-// ===== Делегирование на кнопки "Купить" =====
-document.addEventListener('click',(e)=>{
-  if(e.target.classList.contains('buyBtn')){
-    const card=e.target.closest('.card');
-    const type=card.dataset.type;
-    const cost=parseInt(card.dataset.cost)||0;
-    const name=card.dataset.name;
-    const iconUrl=card.dataset.icon;
-    startPlacement(type,cost,name,iconUrl);
+// Закрыть редактор
+closeEditorBtn.onclick = () => {
+  editMenu.style.display = "none";
+  currentBuildingId = null;
+};
+
+// Сохранить спрайт
+saveSpriteBtn.onclick = async () => {
+  if (!currentBuildingId) return;
+
+  try {
+    // base64 PNG
+    const dataUrl = paintCanvas.toDataURL("image/png");
+
+    // Firebase Storage path
+    const storageRef = ref(storage, `sprites/${currentBuildingId}.png`);
+
+    // upload
+    await uploadString(storageRef, dataUrl, 'data_url');
+
+    // get download url
+    const url = await getDownloadURL(storageRef);
+
+    // обновить Firestore
+    await updateDoc(doc(db, "buildings", currentBuildingId), {
+      iconUrl: url
+    });
+
+    showToast("✅ Спрайт сохранён!");
+    editMenu.style.display = "none";
+    currentBuildingId = null;
+
+  } catch (e) {
+    console.error("Ошибка сохранения:", e);
+    showToast("Ошибка сохранения: " + e.message);
   }
-});
-
-// ===== Editor =====
-const editMenu=document.getElementById('editMenu');
-window.editBuilding=function(id){ editMenu.style.display='block'; };
+};
