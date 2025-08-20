@@ -23,7 +23,6 @@ export function setLevelXp(lvl, newXp){
   level = lvl;
   xp = newXp;
 }
-
 export function schedulePlayerSave(immediate=false){
   if(!uid || !playerDocRef) return;
   dirtyPlayer = true;

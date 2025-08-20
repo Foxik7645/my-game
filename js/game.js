@@ -10,7 +10,6 @@ L.tileLayer('https://cartodb-basemaps-a.global.ssl.fastly.net/dark_nolabels/{z}/
 
 // natural resources placeholders
 const trees = [], rocks = [], corn = [];
-
 function metersToLat(m){ return m/111000; }
 function metersToLng(m, lat){ return m/(111000*Math.cos(lat*Math.PI/180)); }
 
@@ -372,7 +371,6 @@ async function hireWorker(homeId, type){
 window.hireWoodcutter = id => hireWorker(id,'drovosekdom');
 window.hireMiner = id => hireWorker(id,'minehouse');
 window.hireFermer = id => hireWorker(id,'fermerdom');
-
 export function startRealtime(){
   if (!uid) { showToast('Ошибка: пользователь не авторизован.', [], 2500); return; }
   playerUnsub = onSnapshot(playerDocRef, snap => {
