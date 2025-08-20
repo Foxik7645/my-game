@@ -166,73 +166,74 @@ shopToggle.onclick = openShop;
 shopClose.onclick  = closeShop;
 document.getElementById("marketBtn").onclick = openMarket;
 
-// режим постановки
+// карточка раскрывается/сворачивается (показывает buybar)
+shopPanel.addEventListener("click", (e) => {
+  const card = e.target.closest(".card");
+  if (!card || !shopPanel.contains(card)) return;
+
+  // если щёлкнули не по buyBtn — просто переключаем активность карточки
+  if (!e.target.closest(".buyBtn")) {
+    shopPanel.querySelectorAll(".card").forEach(c => { if (c !== card) c.classList.remove("active"); });
+    card.classList.toggle("active");
+  }
+});
+
+// ---- Делегированный обработчик покупки (самое важное) ----
 let placementMode = null;   // { type, cost, name, iconUrl, ghost }
 let mapClickHandler = null;
 
 function cancelPlacement() {
-  if (placementMode?.ghost) {
-    placementMode.ghost.remove();
-  }
+  if (placementMode?.ghost) placementMode.ghost.remove();
   placementMode = null;
-  if (mapClickHandler) {
-    map.off("click", mapClickHandler);
-    mapClickHandler = null;
-  }
+  if (mapClickHandler) { map.off("click", mapClickHandler); mapClickHandler = null; }
   showToast("Постановка отменена", [], 1200);
 }
 
-// вешаем обработчики на все карточки
-document.querySelectorAll("#shopPanel .card").forEach(card => {
-  const btn = card.querySelector(".buyBtn");
-  btn.onclick = () => {
-    const type = card.dataset.type;
-    const cost = parseInt(card.dataset.cost || "0", 10);
-    const name = card.dataset.name || type;
-    const iconUrl = card.dataset.icon;
+shopPanel.addEventListener("click", (e) => {
+  const btn = e.target.closest(".buyBtn");
+  if (!btn) return;                    // не кнопка «Купить»
+  e.stopPropagation();
 
-    if (resources.money < cost) {
-      showToast("Недостаточно денег 💰");
-      return;
-    }
+  const card = btn.closest(".card");
+  const type    = card.dataset.type;
+  const cost    = parseInt(card.dataset.cost || "0", 10);
+  const name    = card.dataset.name || type;
+  const iconUrl = card.dataset.icon;
 
-    // вход в режим постановки
-    if (!map) {
-      showToast("Карта не инициализирована");
-      return;
-    }
+  if (!map) { showToast("Карта не инициализирована", [], 1500); return; }
+  if (resources.money < cost) { showToast("Недостаточно денег 💰", [], 1500); return; }
 
-    if (placementMode?.ghost) placementMode.ghost.remove();
+  // прибираем прежний «призрак»
+  if (placementMode?.ghost) placementMode.ghost.remove();
 
-    const ghostIcon = L.icon({ iconUrl, iconSize: [48,48], className: "ghost" });
-    const ghost = L.marker(map.getCenter(), { icon: ghostIcon, interactive: false }).addTo(map);
+  // создаём «призрак» под курсором и включаем режим установки
+  const ghostIcon = L.icon({ iconUrl, iconSize: [48,48], className: "ghost" });
+  const ghost = L.marker(map.getCenter(), { icon: ghostIcon, interactive: false, opacity: 0.7 }).addTo(map);
+  placementMode = { type, cost, name, iconUrl, ghost };
 
-    placementMode = { type, cost, name, iconUrl, ghost };
-    showToast(`Режим постановки: ${name}. Кликни по карте для размещения. Нажми Esc для отмены.`, [], 3000);
+  // ведём призрака за мышью
+  const follow = (ev) => { ghost.setLatLng(ev.latlng); };
+  map.on("mousemove", follow);
 
-    if (mapClickHandler) map.off("click", mapClickHandler);
-    mapClickHandler = (e) => {
-      const { lat, lng } = e.latlng;
+  // один раз ставим здание по клику на карту
+  mapClickHandler = (ev) => {
+    map.off("mousemove", follow); // перестаём вести призрака
+    const { lat, lng } = ev.latlng;
 
-      // списываем деньги только при фактической установке
-      resources.money -= cost;
-      updateResourcePanel();
+    // списываем деньги только при реальной установке
+    resources.money -= cost; updateResourcePanel();
 
-      // рисуем локально (рендер) — id генерируем простым способом
-      const id = `local_${Date.now()}_${Math.floor(Math.random()*1e6)}`;
-      renderBuildingDoc(id, {
-        id,
-        type,
-        lat,
-        lng,
-        level: 1
-      });
+    // рисуем локально (если нужна запись в Firestore — делай её здесь же)
+    const id = `local_${Date.now()}_${Math.floor(Math.random()*1e6)}`;
+    renderBuildingDoc(id, { id, type, lat, lng, level: 1 });
 
-      cancelPlacement();
-      showToast(`Поставлено: ${name} ✅`, [], 1600);
-    };
-    map.on("click", mapClickHandler);
+    cancelPlacement();
+    closeShop();
+    showToast(`Поставлено: ${name} ✅`, [], 1600);
   };
+  map.once("click", mapClickHandler);
+
+  showToast(`Режим постановки: ${name}. Кликни по карте. Нажми Esc — отмена.`, [], 3000);
 });
 
 // отмена постановки по Esc
@@ -242,6 +243,7 @@ window.addEventListener("keydown", (ev) => {
     cancelPlacement();
   }
 });
+
 
 // ====================== Редактор спрайтов ======================
 const editMenu = document.getElementById("editMenu");
