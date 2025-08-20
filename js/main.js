@@ -86,3 +86,9 @@ window.deleteBuilding = deleteBuilding;
 window.upgradeBase = upgradeBase;
 window.cookFood = cookFood;
 window.editBuilding = editBuilding;  // Из ui.js
+
+// UI
+window.openMarket = openMarket;
+window.closeMarket = closeMarket;
+window.openShop = openShop;
+window.closeShop = closeShop;
