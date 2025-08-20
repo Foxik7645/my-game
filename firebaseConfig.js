@@ -2,7 +2,6 @@ import { initializeApp } from "https://www.gstatic.com/firebasejs/11.0.1/firebas
 import {
   getAuth,
   GoogleAuthProvider,
-  signInWithPopup,
   onAuthStateChanged,
   signOut,
   signInWithRedirect,
@@ -28,7 +27,6 @@ export {
   auth,
   db,
   GoogleAuthProvider,
-  signInWithPopup,
   onAuthStateChanged,
   signOut,
   signInWithRedirect,
