@@ -449,13 +449,21 @@ function makePopupHtml(b){
     const max = FERMERVOM_LEVELS[b.level].workers;
     workersText = `<br/>Рабочие: ${set.size}/${max} (наём: ${WORKER_COST_FOOD} 🍔 • 5 мин)`;
   }
-  const hireWood = (canEdit && b.type==='drovosekdom') ? `<button onclick="hireWoodcutter('${b.id}')">Нанять дровосека (−${WORKER_COST_FOOD} 🍔)</button>` : '';
-  const hireMiner= (canEdit && b.type==='minehouse') ? `<button onclick="hireMiner('${b.id}')">Нанять шахтёра (−${WORKER_COST_FOOD} 🍔)</button>` : '';
-  const hireFermer = (canEdit && b.type==='fermerdom') ? `<button onclick="hireFermer('${b.id}')">Нанять фермера (−${WORKER_COST_FOOD} 🍔)</button>` : '';
+  const hireWood = (canEdit && b.type==='drovosekdom')
+    ? `<button data-action="hire-wood" data-id="${b.id}">Нанять дровосека (−${WORKER_COST_FOOD} 🍔)</button>`
+    : '';
+  const hireMiner = (canEdit && b.type==='minehouse')
+    ? `<button data-action="hire-miner" data-id="${b.id}">Нанять шахтёра (−${WORKER_COST_FOOD} 🍔)</button>`
+    : '';
+  const hireFermer = (canEdit && b.type==='fermerdom')
+    ? `<button data-action="hire-fermer" data-id="${b.id}">Нанять фермера (−${WORKER_COST_FOOD} 🍔)</button>`
+    : '';
   const upBtn = (canEdit && b.type!=='base')
-    ? `<button onclick="window.upgradeBuilding('${b.id}')">Улучшить (${nextCostFor(b)}💰)</button>` : '';
+    ? `<button data-action="upgrade-building" data-id="${b.id}">Улучшить (${nextCostFor(b)}💰)</button>`
+    : '';
   const baseUp = (canEdit && b.type==='base' && nextBaseCost()!=null)
-    ? `<button onclick="window.upgradeBase()">Улучшить базу (${nextBaseCost()}💰)</button>` : '';
+    ? `<button data-action="upgrade-base" data-id="${b.id}">Улучшить базу (${nextBaseCost()}💰)</button>`
+    : '';
   let eatBlock='';
   if (b.type==='houseeat') {
     const lvl = HOUSEEAT_LEVELS[b.level] || HOUSEEAT_LEVELS[1];
@@ -464,13 +472,46 @@ function makePopupHtml(b){
       ? `Статус: готовится… Осталось: <span data-end="${endsAt}" class="cook-eta">—</span>`
       : 'Статус: свободна';
     const btn = (!b.cookActive && canEdit)
-      ? `<button onclick="window.cookFood('${b.id}')">Приготовить 10 🍔 (−5 🌽, −50 💰)</button>`
+      ? `<button data-action="cook-food" data-id="${b.id}">Приготовить 10 🍔 (−5 🌽, −50 💰)</button>`
       : '';
     eatBlock = `<br/><hr/>🍳 <b>Кухня</b><br/>${status}<br/>Время готовки: ${Math.round(lvl.cookMs/1000)} сек.<br/>${btn}`;
   }
-  const editBtn = canEdit ? `<button onclick="editBuilding('${b.id}')">Редактировать</button>` : '';
-  const delBtn  = canEdit ? `<button onclick="window.deleteBuilding('${b.id}')">Удалить</button>` : '';
+  const editBtn = canEdit ? `<button data-action="edit-building" data-id="${b.id}">Редактировать</button>` : '';
+  const delBtn  = canEdit ? `<button data-action="delete-building" data-id="${b.id}">Удалить</button>` : '';
   return `🏠 <b>${name}</b><br/>Тип: ${b.type}<br/>Уровень: ${b.level} ${owner?('<br/>Владелец: '+owner):''}${workersText}${eatBlock}<br/>${editBtn} ${delBtn} ${hireWood} ${hireMiner} ${hireFermer} ${upBtn} ${baseUp}`;
+}
+
+function handlePopupAction(e){
+  const btn = e.target.closest('button[data-action]');
+  if (!btn) return;
+  const action = btn.getAttribute('data-action');
+  const id = btn.getAttribute('data-id');
+  switch (action) {
+    case 'hire-wood':
+      hireWoodcutter(id);
+      break;
+    case 'hire-miner':
+      hireMiner(id);
+      break;
+    case 'hire-fermer':
+      hireFermer(id);
+      break;
+    case 'upgrade-building':
+      upgradeBuilding(id);
+      break;
+    case 'upgrade-base':
+      upgradeBase();
+      break;
+    case 'cook-food':
+      cookFood(id);
+      break;
+    case 'edit-building':
+      editBuilding(id);
+      break;
+    case 'delete-building':
+      deleteBuilding(id);
+      break;
+  }
 }
 
 /* Render building */
@@ -486,7 +527,14 @@ function renderBuildingDoc(id, data){
     marker.options.buildingId = id;
     marker.currentIcon = iconUrl;
     marker.bindPopup(makePopupHtml(b));
-    marker.on('popupopen', ()=> marker.setPopupContent(makePopupHtml(buildingData.get(id) || b)));
+    marker.on('popupopen', e => {
+      e.popup.setContent(makePopupHtml(buildingData.get(id) || b));
+      const el = e.popup.getElement();
+      if (el) {
+        el.removeEventListener('click', handlePopupAction);
+        el.addEventListener('click', handlePopupAction);
+      }
+    });
     marker.on('click', () => {
       const el = marker.getElement();
       if(selectedMarkers.has(marker)){
@@ -774,10 +822,10 @@ function removeLocalWorkerById(id){
   }catch{}
 }
 
-/* найм рабочих (фикс: принимаем homeId из inline) */
-window.hireWoodcutter = async (homeId)=>hireWorkerGeneric(homeId,'drovosekdom','wood');
-window.hireMiner     = async (homeId)=>hireWorkerGeneric(homeId,'minehouse','miner');
-window.hireFermer    = async (homeId)=>hireWorkerGeneric(homeId,'fermerdom','fermer');
+/* найм рабочих */
+export async function hireWoodcutter(homeId){ return hireWorkerGeneric(homeId,'drovosekdom','wood'); }
+export async function hireMiner(homeId){ return hireWorkerGeneric(homeId,'minehouse','miner'); }
+export async function hireFermer(homeId){ return hireWorkerGeneric(homeId,'fermerdom','fermer'); }
 
 async function hireWorkerGeneric(homeId, buildingType, type){
   const b = buildingData.get(homeId);
@@ -1089,7 +1137,7 @@ map.on('click', async e=>{
 });
 
 /* апгрейды/удаление */
-window.deleteBuilding = async function(id){
+export async function deleteBuilding(id){
   const b = buildingData.get(id); if(!b || b.owner!==uid) return alert('Можно удалять только свои здания.');
   try {
     if(['drovosekdom','minehouse','fermerdom'].includes(b.type)){
@@ -1117,7 +1165,7 @@ window.deleteBuilding = async function(id){
   }
 };
 
-window.upgradeBuilding = async function(id){
+export async function upgradeBuilding(id){
   const b = buildingData.get(id); if(!b || b.owner!==uid) return;
   if(b.level>=4) return showToast('Макс. уровень.',[],1200);
   const cost = nextCostFor(b); if(resources.money<cost) return showToast('Недостаточно денег.',[],1200);
@@ -1132,7 +1180,7 @@ window.upgradeBuilding = async function(id){
   }
 };
 
-window.upgradeBase = async function(){
+export async function upgradeBase(){
   if(!baseMarker) return;
   if(baseMeta.level>=4) return showToast('Макс. уровень базы.',[],1200);
   const cost = nextBaseCost(); if(resources.money<cost) return showToast('Недостаточно денег.',[],1200);
@@ -1160,7 +1208,7 @@ window.upgradeBase = async function(){
 };
 
 /* ---------- КУХНЯ / ГОТОВКА ЕДЫ ---------- */
-window.cookFood = async function(buildingId){
+export async function cookFood(buildingId){
   const b = buildingData.get(buildingId); if(!b || b.owner!==uid || b.type!=='houseeat') return;
   const lvl = HOUSEEAT_LEVELS[b.level] || HOUSEEAT_LEVELS[1];
   if (b.cookActive) return;
@@ -1213,7 +1261,7 @@ function startKitchenPoller(){
 /* ---------- Горячие клавиши ---------- */
 document.addEventListener('keydown', e=>{
   if(e.key==='Delete'){
-    selectedMarkers.forEach(m=>{ const id=m.options.buildingId; const b=buildingData.get(id); if(b && b.owner===uid) window.deleteBuilding(id); });
+    selectedMarkers.forEach(m=>{ const id=m.options.buildingId; const b=buildingData.get(id); if(b && b.owner===uid) deleteBuilding(id); });
     selectedMarkers.clear();
   }
 });
@@ -1237,7 +1285,7 @@ canvas.addEventListener('mousedown', e=>{
   drawPixel(x,y); document.addEventListener('mousemove',drag); document.addEventListener('mouseup',up);
 });
 paletteDiv.innerHTML=''; colors.forEach(c=>{const d=document.createElement('div'); d.className='colorTile'; d.style.background=c; d.onclick=()=>currentColor=c; paletteDiv.appendChild(d);});
-window.editBuilding = function(id){
+export function editBuilding(id){
   const m=markers.get(id); if(!m) return; editingMarker=m; editMenu.style.display='flex';
   const b=buildingData.get(id);
   let size;
