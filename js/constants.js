@@ -7,7 +7,8 @@ export const ARRIVE_EPS = 0.00008;
 export const WORKER_DURATION_MS = 5 * 60 * 1000; // 5 минут
 
 // Стоимость найма
-export const WORKER_COST_FOOD = 10;
+// Найм одного рабочего обходится игроку в 2 единицы еды
+export const WORKER_COST_FOOD = 2;
 
 // Спрайты
 export const WC_FRAMES = [
