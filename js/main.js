@@ -91,7 +91,7 @@ function startRealtime(){
   });
 
   // Подписка на рабочих (если реализовано в worker.js)
-  startWorkersRealtime(db, uid);
+  startWorkersRealtime(uid);
 }
 
 // ===== Инит игры =====

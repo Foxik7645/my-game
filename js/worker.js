@@ -3,6 +3,8 @@ import { showToast } from './ui.js';
 import { WORKER_COST_FOOD, WORKER_DURATION_MS, WC_FRAMES, MINER_FRAMES, FERM_FRAMES, FRAME_INTERVAL_MS, STEP_SPEED, ARRIVE_EPS } from './constants.js';
 import { markers, buildingData } from './buildings.js';
 import { map, trees, rocks, corn } from './map.js';
+import { collection, addDoc, onSnapshot, deleteDoc, doc, query, where } from "https://www.gstatic.com/firebasejs/11.0.1/firebase-firestore.js";
+import { db } from './main.js';
 
 // ===== Служебные функции =====
 function randBetween(a,b){ return a + Math.random()*(b-a); }
@@ -33,7 +35,9 @@ function pickWanderPointAround(homeLatLng){
 export const woodcuttersByHome = new Map();
 export const minersByHome = new Map();
 export const farmersByHome = new Map();
-const workerDocs = new Map(); // id -> {homeId,type,marker,expiresAt}
+const workerDocs = new Map(); // id -> {homeId,type,marker,expiresAt,local}
+const localWorkerCache = new Map(); // id -> {homeId,type,expiresAt}
+let currentUid = null;
 
 const WORKERS_PER_LEVEL = {1:3,2:5,3:9,4:15};
 
@@ -49,7 +53,7 @@ function setAdd(mapSet, key, value){
   set.add(value); mapSet.set(key, set);
 }
 
-export function createWorkerFromDoc(workerId, homeId, type, expiresAtMs){
+export function createWorkerFromDoc(workerId, homeId, type, expiresAtMs, isLocal=false){
   const homeMarker = markers.get(homeId); if(!homeMarker) return null;
   const homePos = homeMarker.getLatLng();
   const startAng=Math.random()*2*Math.PI, startR=randBetween(10,25);
@@ -63,7 +67,7 @@ export function createWorkerFromDoc(workerId, homeId, type, expiresAtMs){
     selected:false, cargo:0,
     harvest:{targetId:null,startTs:0,durationMs:3000},
     anim:{frameIndex:1, accMs:0, facingRight:true},
-    homeId, frames, expiresAt: expiresAtMs
+    homeId, frames, expiresAt: expiresAtMs, local:isLocal
   };
   m.on('click', ()=>{
     m.worker.selected = !m.worker.selected;
@@ -72,7 +76,7 @@ export function createWorkerFromDoc(workerId, homeId, type, expiresAtMs){
   });
   const setMap = type==='wood'?woodcuttersByHome:type==='miner'?minersByHome:farmersByHome;
   setAdd(setMap, homeId, m);
-  workerDocs.set(workerId, {homeId,type,marker:m,expiresAt:expiresAtMs});
+  workerDocs.set(workerId, {homeId,type,marker:m,expiresAt:expiresAtMs, local:isLocal});
   return m;
 }
 
@@ -93,18 +97,61 @@ async function hireWorkerGeneric(homeId, buildingType, type){
   updateResourcePanel();
   schedulePlayerSave();
 
-  const id = 'local-'+Math.random().toString(36).slice(2);
-  createWorkerFromDoc(id, homeId, type, Date.now()+WORKER_DURATION_MS);
+  const expiresAt = Date.now()+WORKER_DURATION_MS;
+  try {
+    if(!currentUid) throw new Error('no uid');
+    const workersRef = collection(db, 'players', currentUid, 'workers');
+    const docRef = await addDoc(workersRef, { homeId, type, expiresAt });
+    createWorkerFromDoc(docRef.id, homeId, type, expiresAt);
+  } catch(e){
+    const id = 'local-'+Math.random().toString(36).slice(2);
+    localWorkerCache.set(id, {homeId,type,expiresAt});
+    createWorkerFromDoc(id, homeId, type, expiresAt, true);
+  }
   showToast('👷 Рабочий нанят на 5 минут!',[],1500);
 }
 
-export function startWorkersRealtime(){
+export function startWorkersRealtime(uid){
+  currentUid = uid;
+  workerDocs.forEach(({marker})=>map.removeLayer(marker));
+  workerDocs.clear();
   woodcuttersByHome.clear(); minersByHome.clear(); farmersByHome.clear();
   buildingData.forEach((b,id)=>{
     if(b.type==='drovosekdom') woodcuttersByHome.set(id,new Set());
     if(b.type==='minehouse')   minersByHome.set(id,new Set());
     if(b.type==='fermerdom')   farmersByHome.set(id,new Set());
   });
+
+  if(!uid) return;
+
+  const workersRef = collection(db, 'players', uid, 'workers');
+  const q = query(workersRef, where('expiresAt', '>', Date.now()));
+  try {
+    onSnapshot(q, snapshot => {
+      snapshot.docChanges().forEach(change => {
+        const data = change.doc.data();
+        if(change.type === 'added'){
+          if(workerDocs.has(change.doc.id)) return;
+          createWorkerFromDoc(change.doc.id, data.homeId, data.type, data.expiresAt);
+        }
+        if(change.type === 'removed'){
+          const info = workerDocs.get(change.doc.id);
+          if(info){
+            const setMap = info.type==='wood'?woodcuttersByHome:info.type==='miner'?minersByHome:farmersByHome;
+            setMap.get(info.homeId)?.delete(info.marker);
+            map.removeLayer(info.marker);
+            workerDocs.delete(change.doc.id);
+          }
+        }
+      });
+    }, err => {
+      console.warn('worker realtime error', err);
+      localWorkerCache.forEach((d,id)=>createWorkerFromDoc(id,d.homeId,d.type,d.expiresAt,true));
+    });
+  } catch(e){
+    console.warn('worker realtime init failed', e);
+    localWorkerCache.forEach((d,id)=>createWorkerFromDoc(id,d.homeId,d.type,d.expiresAt,true));
+  }
 }
 
 function startHarvest(workerMarker, targetMap){
@@ -138,12 +185,20 @@ export function moveWorkers(){
   function updateSet(set, homeId, type){
     const homeMarker = markers.get(homeId); if(!homeMarker) return;
     const homePos = homeMarker.getLatLng();
-    for(const marker of Array.from(set)){
-      const w = marker.worker; const pos = marker.getLatLng();
+      for(const marker of Array.from(set)){
+        const w = marker.worker; const pos = marker.getLatLng();
 
-      if(Date.now() >= w.expiresAt){
-        set.delete(marker); map.removeLayer(marker); workerDocs.delete(w.id); continue;
-      }
+        if(Date.now() >= w.expiresAt){
+          set.delete(marker);
+          map.removeLayer(marker);
+          workerDocs.delete(w.id);
+          if(w.local){
+            localWorkerCache.delete(w.id);
+          } else if(currentUid){
+            try { deleteDoc(doc(db,'players',currentUid,'workers',w.id)); } catch(e){}
+          }
+          continue;
+        }
 
       if(w.state==='wander'){
         const pool = type==='wood'?trees:type==='miner'?rocks:corn;
