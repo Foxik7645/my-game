@@ -16,6 +16,27 @@ const BUILDING_ICONS = {
 export const markers = new Map();       // id -> Leaflet marker
 export const buildingData = new Map();  // id -> {type, lat, lng, level, iconUrl?, ...}
 
+// ===== Проверка попадания точки в полигон базы =====
+export function isPointInBase(lat, lng) {
+  const base = [...buildingData.values()].find(b => b.type === 'base');
+  const poly = base?.polygon;
+  if (!poly || poly.length < 3) return true;
+  return pointInPolygon([lat, lng], poly);
+}
+
+function pointInPolygon(point, vs) {
+  const x = point[1], y = point[0];
+  let inside = false;
+  for (let i = 0, j = vs.length - 1; i < vs.length; j = i++) {
+    const xi = vs[i][1], yi = vs[i][0];
+    const xj = vs[j][1], yj = vs[j][0];
+    const intersect = ((yi > y) !== (yj > y)) &&
+                      (x < (xj - xi) * (y - yi) / (yj - yi) + xi);
+    if (intersect) inside = !inside;
+  }
+  return inside;
+}
+
 // ===== Отрисовка здания =====
 export function renderBuildingDoc(id, data) {
   if (!map) return;
