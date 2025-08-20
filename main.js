@@ -1,40 +1,6 @@
-// firebaseConfig.js
-import { initializeApp } from "https://www.gstatic.com/firebasejs/11.0.1/firebase-app.js";
+// main.js (updated)
+/* ---------- Firebase ---------- */
 import {
-  getAuth,
-  GoogleAuthProvider,
-  onAuthStateChanged,
-  signOut,
-  signInWithRedirect,
-  getRedirectResult,
-  signInWithPopup,
-  setPersistence,
-  browserLocalPersistence,
-} from "https://www.gstatic.com/firebasejs/11.0.1/firebase-auth.js";
-import {
-  getFirestore, collection, addDoc, onSnapshot, doc, setDoc, getDoc,
-  updateDoc, deleteDoc, serverTimestamp, getDocs, query, where
-} from "https://www.gstatic.com/firebasejs/11.0.1/firebase-firestore.js";
-
-const firebaseConfig = {
-  apiKey: "AIzaSyC-cKsUyDM2H1Hs3ouKjRjO2Vxg9QvC880",
-  authDomain: "gamemap-84ae8.firebaseapp.com",
-  projectId: "gamemap-84ae8",
-  // Было: firebasestorage.app — исправил на стандартный bucket
-  storageBucket: "gamemap-84ae8.appspot.com",
-  messagingSenderId: "198147414309",
-  appId: "1:198147414309:web:33b340d6bf6dbd3d01a2cc",
-  measurementId: "G-M2TKZCT4LT",
-};
-
-const app = initializeApp(firebaseConfig);
-const auth = getAuth(app);
-// делаем авторизацию устойчивой в рамках текущего домена
-await setPersistence(auth, browserLocalPersistence);
-
-const db = getFirestore(app);
-
-export {
   auth,
   db,
   GoogleAuthProvider,
@@ -42,7 +8,6 @@ export {
   signOut,
   signInWithRedirect,
   getRedirectResult,
-  // экспортируем popup
   signInWithPopup,
   collection,
   addDoc,
@@ -56,8 +21,7 @@ export {
   getDocs,
   query,
   where
-};
-
+} from "./firebaseConfig.js";
 
 /* ---------- Auth UI ---------- */
 const loginBtn = document.getElementById('loginBtn');
@@ -80,9 +44,25 @@ getRedirectResult(auth).catch(e => {
 });
 loginBtn.onclick = async () => {
   try {
-    await signInWithRedirect(auth, provider);
+    // Try popup first (works without 3rd-party cookies)
+    await signInWithPopup(auth, provider);
   } catch (err) {
-    showToast('Ошибка входа: ' + (err?.message || err), [], 2500);
+    const code = err?.code || '';
+    const shouldFallbackToRedirect =
+      code === 'auth/popup-blocked' ||
+      code === 'auth/popup-closed-by-user' ||
+      code === 'auth/cancelled-popup-request' ||
+      code === 'auth/operation-not-supported-in-this-environment';
+    if (shouldFallbackToRedirect) {
+      try {
+        await signInWithRedirect(auth, provider);
+        return;
+      } catch (e2) {
+        showToast('Ошибка входа (redirect): ' + (e2?.message || e2), [], 3000);
+      }
+    } else {
+      showToast('Ошибка входа: ' + (err?.message || err), [], 3000);
+    }
   }
 };
 logoutBtn.onclick = async () => { try{ await signOut(auth); }catch(e){} };
