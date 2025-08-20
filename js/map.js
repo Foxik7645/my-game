@@ -29,43 +29,36 @@ export const corn = new Map();
 
 let treeId = 0, rockId = 0, cornId = 0;
 
-// ===== Функции спавна =====
-export function spawnTreesBatch(count=5){
+// ===== Функции спавна около здания =====
+export function spawnTreesBatch(count=5, baseLat=55.75, baseLng=37.61){
   if(!map) return;
   for(let i=0;i<count;i++){
-    const latlng = randomLatLng();
+    const lat = baseLat + (Math.random()-0.5)*0.01; 
+    const lng = baseLng + (Math.random()-0.5)*0.01;
     const icon = treeIcons[Math.floor(Math.random()*treeIcons.length)];
-    const marker = L.marker(latlng,{icon}).addTo(map);
+    const marker = L.marker([lat,lng],{icon}).addTo(map);
     trees.set(`tree_${treeId++}`, marker);
   }
 }
 
-export function spawnRocksBatch(count=3){
+export function spawnRocksBatch(count=3, baseLat=55.75, baseLng=37.61){
   if(!map) return;
   for(let i=0;i<count;i++){
-    const latlng = randomLatLng();
+    const lat = baseLat + (Math.random()-0.5)*0.01;
+    const lng = baseLng + (Math.random()-0.5)*0.01;
     const icon = rockIcons[Math.floor(Math.random()*rockIcons.length)];
-    const marker = L.marker(latlng,{icon}).addTo(map);
+    const marker = L.marker([lat,lng],{icon}).addTo(map);
     rocks.set(`rock_${rockId++}`, marker);
   }
 }
 
-export function spawnCornBatch(count=4){
+export function spawnCornBatch(count=4, baseLat=55.75, baseLng=37.61){
   if(!map) return;
   for(let i=0;i<count;i++){
-    const latlng = randomLatLng();
+    const lat = baseLat + (Math.random()-0.5)*0.01;
+    const lng = baseLng + (Math.random()-0.5)*0.01;
     const icon = cornIcons[Math.floor(Math.random()*cornIcons.length)];
-    const marker = L.marker(latlng,{icon}).addTo(map);
+    const marker = L.marker([lat,lng],{icon}).addTo(map);
     corn.set(`corn_${cornId++}`, marker);
   }
-}
-
-// ===== Утилита для генерации координат =====
-function randomLatLng(){
-  // Центр Москвы ~ [55.75, 37.61]
-  const baseLat = 55.75;
-  const baseLng = 37.61;
-  const lat = baseLat + (Math.random()-0.5)*0.1; // ±0.05
-  const lng = baseLng + (Math.random()-0.5)*0.1;
-  return [lat,lng];
 }
