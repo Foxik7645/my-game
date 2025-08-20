@@ -50,26 +50,27 @@ export function unrenderBuildingDoc(id) {
 // ===== Попапы зданий =====
 export function makePopupHtml(b) {
   const lvl = b.level || 1;
+  const id = b.id;
+  const editBtn = `<button onclick="editBuilding('${id}')">✏️ Редактировать</button>`;
+  const delBtn  = `<button onclick="window.deleteBuilding('${id}')">Удалить</button>`;
+  const upBtn   = `<button onclick="window.upgradeBuilding('${id}')">Улучшить</button>`;
 
   if (b.type === 'houseeat') {
-    return `
-      <div class="pixel">
-        <b>Кухня</b> • Lv.${lvl}<br/>
-        Готовит 10 🍔 за 5 🌽 + 50 💰<br/>
-        <button onclick="cookFood('${b.id}')">Приготовить</button><br/>
-        <button onclick="editBuilding('${b.id}')">✏️ Редактировать</button>
-      </div>`;
+    return `<div class="pixel"><b>Кухня</b> • Lv.${lvl}<br/>Готовит 10 🍔 за 5 🌽 + 50 💰<br/><button onclick="cookFood('${id}')">Приготовить</button><br/>${editBtn} ${delBtn}</div>`;
   }
-  if (b.type === 'drovosekdom')
-    return `<div class="pixel"><b>Дом дровосека</b> • Lv.${lvl}<br/><button onclick="editBuilding('${b.id}')">✏️ Редактировать</button></div>`;
-  if (b.type === 'minehouse')
-    return `<div class="pixel"><b>Дом шахтёра</b> • Lv.${lvl}<br/><button onclick="editBuilding('${b.id}')">✏️ Редактировать</button></div>`;
-  if (b.type === 'fermerdom')
-    return `<div class="pixel"><b>Дом фермера</b> • Lv.${lvl}<br/><button onclick="editBuilding('${b.id}')">✏️ Редактировать</button></div>`;
-  if (b.type === 'base')
-    return `<div class="pixel"><b>База</b> • Lv.${lvl}<br/><button onclick="editBuilding('${b.id}')">✏️ Редактировать</button></div>`;
-
-  return `<div class="pixel"><b>${b.type}</b> • Lv.${lvl}<br/><button onclick="editBuilding('${b.id}')">✏️ Редактировать</button></div>`;
+  if (b.type === 'drovosekdom') {
+    return `<div class="pixel"><b>Дом дровосека</b> • Lv.${lvl}<br/><button onclick="hireWoodcutter('${id}')">Нанять рабочего</button><br/>${upBtn}<br/>${editBtn} ${delBtn}</div>`;
+  }
+  if (b.type === 'minehouse') {
+    return `<div class="pixel"><b>Дом шахтёра</b> • Lv.${lvl}<br/><button onclick="hireMiner('${id}')">Нанять рабочего</button><br/>${upBtn}<br/>${editBtn} ${delBtn}</div>`;
+  }
+  if (b.type === 'fermerdom') {
+    return `<div class="pixel"><b>Дом фермера</b> • Lv.${lvl}<br/><button onclick="hireFermer('${id}')">Нанять рабочего</button><br/>${upBtn}<br/>${editBtn} ${delBtn}</div>`;
+  }
+  if (b.type === 'base') {
+    return `<div class="pixel"><b>База</b> • Lv.${lvl}<br/><button onclick="window.upgradeBase()">Улучшить базу</button><br/>${editBtn} ${delBtn}</div>`;
+  }
+  return `<div class="pixel"><b>${b.type}</b> • Lv.${lvl}<br/>${upBtn}<br/>${editBtn} ${delBtn}</div>`;
 }
 
 // ===== Апгрейды / удаление =====

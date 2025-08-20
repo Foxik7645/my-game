@@ -1,10 +1,10 @@
 // ===== Импорты Firebase =====
 import { initializeApp } from "https://www.gstatic.com/firebasejs/11.0.1/firebase-app.js";
 import { getAuth, GoogleAuthProvider, signInWithPopup, onAuthStateChanged, signOut } from "https://www.gstatic.com/firebasejs/11.0.1/firebase-auth.js";
-import { getFirestore, collection, doc, serverTimestamp, onSnapshot } from "https://www.gstatic.com/firebasejs/11.0.1/firebase-firestore.js";
+import { getFirestore, collection, doc, serverTimestamp, onSnapshot, getDoc, setDoc } from "https://www.gstatic.com/firebasejs/11.0.1/firebase-firestore.js";
 
 // ===== Импорты из модулей =====
-import { resources, updateResourcePanel, addXP, schedulePlayerSave } from './resources.js';
+import { resources, updateResourcePanel, addXP, schedulePlayerSave, setPlayerRef } from './resources.js';
 import { startWorkersRealtime, hireWoodcutter, hireMiner, hireFermer, moveWorkers } from './worker.js';
 import { showToast, openMarket, closeMarket, openShop, closeShop, editBuilding } from './ui.js';
 import { renderBuildingDoc, unrenderBuildingDoc, upgradeBuilding, deleteBuilding, upgradeBase, cookFood } from './buildings.js';
@@ -47,6 +47,7 @@ onAuthStateChanged(auth, async user => {
     logoutBtn.style.display = 'inline-block';
     playerDocRef = doc(db, 'players', uid);
     await ensurePlayerDoc();
+    setPlayerRef(uid, playerDocRef);
     startRealtime();   // 👈 запуск подписок
   } else {
     uid = null;
@@ -61,7 +62,17 @@ onAuthStateChanged(auth, async user => {
 // ===== Обеспечение профиля игрока =====
 async function ensurePlayerDoc(){
   if (!uid) return;
-  // тут твоя логика создания документа игрока
+  try {
+    const snap = await getDoc(playerDocRef);
+    if(!snap.exists()){
+      await setDoc(playerDocRef, {
+        money: 100, wood: 10, stone: 0, corn: 0, food: 30,
+        level: 1, xp: 0, createdAt: serverTimestamp()
+      });
+    }
+  } catch (e) {
+    showToast('Ошибка создания профиля: ' + e.message, [], 2500);
+  }
 }
 
 // ===== Realtime слушатели =====
