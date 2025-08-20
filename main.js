@@ -43,6 +43,8 @@ window.addEventListener('beforeunload', ()=>schedulePlayerSave(true));
 /* найм на 5 минут за 2 еды */
 const WORKER_COST_FOOD = 2;
 const WORKER_DURATION_MS = 5 * 60 * 1000;
+const SOLDIER_COST_MONEY = 250;
+const SOLDIER_DURATION_MS = 2 * 60 * 1000;
 
 /* UI helpers */
 function updateResourcePanel(){
@@ -92,6 +94,7 @@ map.on('zoomend', ()=>{
   trees.forEach(t=>setMarkerHidden(t.marker, hidden));
   rocks.forEach(r=>setMarkerHidden(r.marker, hidden));
   corn.forEach(c=>setMarkerHidden(c.marker, hidden));
+  soldiers.forEach(m=>setMarkerHidden(m, hidden));
   if(ghostMarker) setMarkerHidden(ghostMarker, hidden);
 });
 
@@ -100,6 +103,19 @@ const markers=new Map();
 const buildingData=new Map();
 const selectedMarkers=new Set();
 const otherBaseZones = new Map();
+const soldiers = new Set();
+
+const attackBtn = document.getElementById('attackBtn');
+let attackTargetOwner = null;
+attackBtn.onclick = () => {
+  const targets = [...buildingData.values()].filter(b=>b.type==='base' && b.owner!==uid);
+  if(targets.length===0){ showToast('Нет целей для атаки',[],1500); return; }
+  const options = targets.map(b=>b.owner).join('\n');
+  const pick = prompt('Введите ID игрока:\n'+options);
+  const tgt = targets.find(b=>b.owner===pick);
+  if(tgt){ attackTargetOwner = tgt.owner; showToast('Цель выбрана!',[],1200); }
+  else showToast('Игрок не найден',[],1500);
+};
 
 let baseMarker=null, baseZone=null;
 let baseMeta={ level:0, color:'#00ffcc', poly:{angles:[], radii:[]} };
@@ -124,6 +140,7 @@ const HOUSEEAT_LEVELS = {
   3: { icon: 144, cost: 700, cookMs: 30_000, paint: 96 },
   4: { icon: 160, cost: 1100, cookMs: 20_000, paint: 112 }
 };
+const SOLDATHOUSE_LEVELS = JSON.parse(JSON.stringify(DROVOSEKDOM_LEVELS));
 
 function randomBrightColor(){ const h = Math.floor(Math.random()*360); return `hsl(${h} 95% 60%)`; }
 function makeBasePolyAround(center, radiusM){
@@ -185,6 +202,7 @@ function iconSpecForType(type, level=1){
   const table = type==='houseeat'?HOUSEEAT_LEVELS
               : type==='drovosekdom'?DROVOSEKDOM_LEVELS
               : type==='minehouse'?MINEHOUSE_LEVELS
+              : type==='soldathouse'?SOLDATHOUSE_LEVELS
               : FERMERVOM_LEVELS;
   const lvl = table[level] || table[1];
   return {size:[lvl.icon,lvl.icon], anchor:[lvl.icon/2,lvl.icon/2]};
@@ -195,6 +213,7 @@ function iconUrlForType(type){
   if(type==='minehouse') return './images/Minehouse.png';
   if(type==='fermerdom') return './images/FermerDom.png';
   if(type==='houseeat') return './images/HouseEat.png';
+  if(type==='soldathouse') return './images/SoldatHouse.png';
   return './images/House.png';
 }
 function nextBaseCost(){ return (baseMeta.level>=4)?null:BASE_LEVELS[baseMeta.level+1].cost; }
@@ -203,6 +222,7 @@ function nextCostFor(b){
   if(b.type==='minehouse') return (b.level>=4)?null:MINEHOUSE_LEVELS[b.level+1].cost;
   if(b.type==='fermerdom') return (b.level>=4)?null:FERMERVOM_LEVELS[b.level+1].cost;
   if(b.type==='houseeat') return (b.level>=4)?null:HOUSEEAT_LEVELS[b.level+1].cost;
+  if(b.type==='soldathouse') return (b.level>=4)?null:SOLDATHOUSE_LEVELS[b.level+1].cost;
   return null;
 }
 
@@ -243,6 +263,7 @@ function makePopupHtml(b){
   const owner = b.owner ? (b.owner===uid?'(вы)':b.owner.slice(0,6)) : '';
   const name = b.name || b.type;
   const canEdit = (b.owner===uid);
+  const hp = b.hp || 100;
   let workersText='';
   if(b.type==='drovosekdom'){
     const set = woodcuttersByHome.get(b.id) || new Set();
@@ -256,6 +277,10 @@ function makePopupHtml(b){
     const set = farmersByHome.get(b.id) || new Set();
     const max = FERMERVOM_LEVELS[b.level].workers;
     workersText = `<br/>Рабочие: ${set.size}/${max} (наём: ${WORKER_COST_FOOD} 🍔 • 5 мин)`;
+  }
+  let soldierBlock='';
+  if(b.type==='soldathouse'){
+    soldierBlock = canEdit ? `<br/><button onclick="trainSoldier('${b.id}')">Тренировать солдата (−${SOLDIER_COST_MONEY} 💰)</button>` : '';
   }
   const hireWood = (canEdit && b.type==='drovosekdom') ? `<button onclick="hireWoodcutter('${b.id}')">Нанять дровосека (−${WORKER_COST_FOOD} 🍔)</button>` : '';
   const hireMiner= (canEdit && b.type==='minehouse') ? `<button onclick="hireMiner('${b.id}')">Нанять шахтёра (−${WORKER_COST_FOOD} 🍔)</button>` : '';
@@ -278,12 +303,13 @@ function makePopupHtml(b){
   }
   const editBtn = canEdit ? `<button onclick="editBuilding('${b.id}')">Редактировать</button>` : '';
   const delBtn  = canEdit ? `<button onclick="window.deleteBuilding('${b.id}')">Удалить</button>` : '';
-  return `🏠 <b>${name}</b><br/>Тип: ${b.type}<br/>Уровень: ${b.level} ${owner?('<br/>Владелец: '+owner):''}${workersText}${eatBlock}<br/>${editBtn} ${delBtn} ${hireWood} ${hireMiner} ${hireFermer} ${upBtn} ${baseUp}`;
+  return `🏠 <b>${name}</b><br/>Тип: ${b.type}<br/>HP: ${hp}<br/>Уровень: ${b.level} ${owner?('<br/>Владелец: '+owner):''}${workersText}${soldierBlock}${eatBlock}<br/>${editBtn} ${delBtn} ${hireWood} ${hireMiner} ${hireFermer} ${upBtn} ${baseUp}`;
 }
 
 /* Render building */
 function renderBuildingDoc(id, data){
   const b = { id, ...data };
+  b.hp = b.hp ?? 100;
   const existed = markers.has(id);
   if(!existed){
     const spec = iconSpecForType(b.type, b.level||1);
@@ -499,6 +525,7 @@ function spawnCornBatch(){
 const WC_FRAMES = ['./images/Drovosek1.png','./images/Drovosek2.png','./images/Drovosek3.png','./images/Drovosek4.png'];
 const MINER_FRAMES= ['./images/Miner1.png','./images/Miner2.png','./images/Miner3.png','./images/Miner4.png'];
 const FERM_FRAMES = ['./images/ferma1.png','./images/ferma2.png','./images/ferma3.png','./images/ferma4.png'];
+const SOLDIER_FRAMES = ['./images/Soldat1.png','./images/Soldat2.png','./images/Soldat3.png','./images/Soldat4.png'];
 const IDLE_INDEX = 1, FRAME_INTERVAL_MS = 160;
 const STEP_SPEED = 0.0009, ARRIVE_EPS = 0.00008;
 
@@ -586,6 +613,18 @@ function removeLocalWorkerById(id){
 window.hireWoodcutter = async (homeId)=>hireWorkerGeneric(homeId,'drovosekdom','wood');
 window.hireMiner     = async (homeId)=>hireWorkerGeneric(homeId,'minehouse','miner');
 window.hireFermer    = async (homeId)=>hireWorkerGeneric(homeId,'fermerdom','fermer');
+window.trainSoldier = (homeId)=>{
+  const b = buildingData.get(homeId);
+  if(!b || b.owner!==uid || b.type!=='soldathouse') return;
+  if(resources.money < SOLDIER_COST_MONEY){ showToast('Недостаточно денег.',[],1400); return; }
+  if(!attackTargetOwner){ showToast('Сначала выберите цель атаки',[],1500); return; }
+  resources.money -= SOLDIER_COST_MONEY; updateResourcePanel(); schedulePlayerSave();
+  const homeMarker = markers.get(homeId); if(!homeMarker) return;
+  const m = L.marker(homeMarker.getLatLng(), {icon: makeWorkerDiv(SOLDIER_FRAMES[IDLE_INDEX], false)}).addTo(map);
+  setMarkerHidden(m, !isSpriteZoomVisible(map.getZoom()));
+  m.soldier = {state:'toBase', targetOwner: attackTargetOwner, targetId:null, speed: STEP_SPEED, anim:{frameIndex:IDLE_INDEX, accMs:0, facingRight:true}, expiresAt: Date.now()+SOLDIER_DURATION_MS, attackAcc:0};
+  soldiers.add(m);
+};
 
 async function hireWorkerGeneric(homeId, buildingType, type){
   const b = buildingData.get(homeId);
@@ -756,7 +795,55 @@ function moveWorkers(){
   woodcuttersByHome.forEach((set,homeId)=>updateSet(set,homeId,'wood'));
   minersByHome.forEach((set,homeId)=>updateSet(set,homeId,'miner'));
   farmersByHome.forEach((set,homeId)=>updateSet(set,homeId,'fermer'));
+  updateSoldiers(dt);
   requestAnimationFrame(moveWorkers);
+}
+
+function updateSoldiers(dt){
+  for(const marker of Array.from(soldiers)){
+    const s = marker.soldier; const pos = marker.getLatLng();
+    if(Date.now() >= s.expiresAt){ map.removeLayer(marker); soldiers.delete(marker); continue; }
+    if(s.state==='toBase'){
+      const base = [...buildingData.values()].find(b=>b.type==='base' && b.owner===s.targetOwner);
+      if(!base){ map.removeLayer(marker); soldiers.delete(marker); continue; }
+      const target = {lat:base.lat, lng:base.lng};
+      moveTowards(marker, pos, target, s, dt);
+      if(Math.abs(target.lat-pos.lat)+Math.abs(target.lng-pos.lng) < ARRIVE_EPS){ s.state='seek'; }
+      continue;
+    }
+    if(s.state==='seek'){
+      const enemies = [...buildingData.values()].filter(b=>b.owner===s.targetOwner && b.type!=='base');
+      if(enemies.length===0){ s.state='idle'; continue; }
+      const b = enemies[Math.floor(Math.random()*enemies.length)];
+      s.targetId = b.id; s.state='toBuilding'; continue;
+    }
+    if(s.state==='toBuilding'){
+      const b = buildingData.get(s.targetId);
+      if(!b){ s.state='seek'; continue; }
+      const target = {lat:b.lat, lng:b.lng};
+      moveTowards(marker, pos, target, s, dt);
+      if(Math.abs(target.lat-pos.lat)+Math.abs(target.lng-pos.lng) < ARRIVE_EPS){ s.state='attack'; }
+      continue;
+    }
+    if(s.state==='attack'){
+      const b = buildingData.get(s.targetId);
+      if(!b){ s.state='seek'; continue; }
+      s.attackAcc += dt; if(s.attackAcc >= 1000){ s.attackAcc=0;
+        b.hp = (b.hp||100) - 1;
+        if(b.hp<=0){ deleteDoc(doc(db,'buildings', b.id)).catch(()=>{}); }
+        else { updateDoc(doc(db,'buildings', b.id), {hp:b.hp}).catch(()=>{}); buildingData.set(b.id,b); refreshPopupForBuilding(b.id); }
+      }
+    }
+  }
+}
+
+function moveTowards(marker, pos, target, s, dt){
+  const dLat = target.lat - pos.lat, dLng = target.lng - pos.lng;
+  marker.setLatLng([pos.lat + dLat*s.speed, pos.lng + dLng*s.speed]);
+  const goingRight = dLng>0;
+  if(goingRight!==s.anim.facingRight){ s.anim.facingRight=goingRight; marker.setIcon(makeWorkerDiv(SOLDIER_FRAMES[s.anim.frameIndex], !s.anim.facingRight)); }
+  s.anim.accMs += dt;
+  if(s.anim.accMs>=FRAME_INTERVAL_MS){ s.anim.accMs=0; s.anim.frameIndex=(s.anim.frameIndex+1)%SOLDIER_FRAMES.length; marker.setIcon(makeWorkerDiv(SOLDIER_FRAMES[s.anim.frameIndex], !s.anim.facingRight)); }
 }
 
 /* ---------- Market ---------- */
@@ -878,12 +965,12 @@ map.on('click', async e=>{
     }
     const docRef = await addDoc(collection(db,'buildings'), {
       owner: uid, type: bp.type, name: bp.name||bp.type, level: 1,
-      lat: e.latlng.lat, lng: e.latlng.lng, createdAt: serverTimestamp(), ...additionalData
+      lat: e.latlng.lat, lng: e.latlng.lng, hp:100, createdAt: serverTimestamp(), ...additionalData
     });
     // локальная отрисовка сразу
     renderBuildingDoc(docRef.id, {
       owner: uid, type: bp.type, name: bp.name||bp.type, level: 1,
-      lat: e.latlng.lat, lng: e.latlng.lng, ...additionalData
+      lat: e.latlng.lat, lng: e.latlng.lng, hp:100, ...additionalData
     });
     schedulePlayerSave(true);
   } catch (err) {
@@ -1052,7 +1139,11 @@ window.editBuilding = function(id){
   if(b.type==='base') size = BASE_LEVELS[b.level].paint;
   else if(b.type==='houseeat') size = HOUSEEAT_LEVELS[b.level].paint;
   else {
-    const table = b.type==='drovosekdom'?DROVOSEKDOM_LEVELS: b.type==='minehouse'?MINEHOUSE_LEVELS: FERMERVOM_LEVELS;
+    const table = b.type==='drovosekdom'?DROVOSEKDOM_LEVELS
+                : b.type==='minehouse'?MINEHOUSE_LEVELS
+                : b.type==='fermerdom'?FERMERVOM_LEVELS
+                : b.type==='soldathouse'?SOLDATHOUSE_LEVELS
+                : FERMERVOM_LEVELS;
     size = table[b.level].paint;
   }
   setCanvasLogicalSize(size);
@@ -1116,8 +1207,8 @@ onAuthStateChanged(auth, async user => {
 
     woodcuttersByHome.clear(); minersByHome.clear(); farmersByHome.clear();
     workerDocs.forEach(rec=>{ try{ map.removeLayer(rec.marker);}catch(e){} }); workerDocs.clear();
+    soldiers.forEach(m=>{ try{ map.removeLayer(m);}catch(e){} }); soldiers.clear();
   }
 }, error => {
   showToast('Ошибка аутентификации: ' + error.message, [], 2500);
 });
-
