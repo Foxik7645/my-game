@@ -58,6 +58,7 @@
   .card.base {background:url('./images/CardBase.png') center/cover no-repeat;}
   .card.fermer {background:url('./images/Cardeda.png') center/cover no-repeat;}
   .card.houseeat {background:url('./images/CardHouseEat.png') center/cover no-repeat;}
+  .card.soldat {background:url('./images/CardSoldat.png') center/cover no-repeat;}
   .card .title{position:absolute; top:18px; left:84px; right:16px; font-size:13px; color:var(--cream); text-shadow:0 1px 0 #000;}
   .card .cost {position:absolute; top:46px; left:84px; right:16px; font-size:12px; color:var(--cream); text-shadow:0 1px 0 #000;}
   .card .desc {position:absolute; left:30px; right:30px; bottom:22px; font-size:12px; line-height:1.25; color:var(--cream); text-shadow:0 1px 0 #000;}
@@ -78,6 +79,7 @@
   </div>
   <button id="shopToggle">Магазин</button>
   <button id="marketBtn">Рынок</button>
+<button id="attackBtn">Атаковать</button>
   <div id="authBox">
     <span id="userName"></span>
     <button id="loginBtn">Войти с Google</button>
@@ -159,6 +161,12 @@
     <div class="title">FermerDom</div>
     <div class="cost">Стоимость: 100</div>
     <div class="desc">Дом фермера. Рабочие собирают кукурузу рядом.</div>
+  </div>
+<div class="card soldat pixel" data-type="soldathouse" data-cost="100" data-icon="./images/SoldatHouse.png" data-name="SoldatHouse">
+    <div class="buybar"><span class="price">100 💰</span><button class="buyBtn">Купить</button></div>
+    <div class="title">SoldatHouse</div>
+    <div class="cost">Стоимость: 100</div>
+    <div class="desc">Тренирует солдат для атак на другие базы.</div>
   </div>
   <div class="card houseeat pixel" data-type="houseeat" data-cost="0" data-icon="./images/HouseEat.png" data-name="HouseEat">
     <div class="buybar"><span class="price">Бесплатно</span><button class="buyBtn">Поставить</button></div>
