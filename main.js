@@ -45,14 +45,10 @@ loginBtn.onclick = async () => {
   try {
     await signInWithPopup(auth, provider);
   } catch (e) {
-    if (e?.code === 'auth/popup-blocked' || e?.code === 'auth/popup-closed-by-user' || e?.code === 'auth/operation-not-supported-in-this-environment') {
-      try {
-        await signInWithRedirect(auth, provider);
-      } catch (err) {
-        showToast('Ошибка входа: ' + (err?.message || err), [], 2500);
-      }
-    } else {
-      showToast('Ошибка входа: ' + (e?.message || e), [], 2500);
+    try {
+      await signInWithRedirect(auth, provider);
+    } catch (err) {
+      showToast('Ошибка входа: ' + (err?.message || err), [], 2500);
     }
   }
 };
