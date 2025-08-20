@@ -1,12 +1,12 @@
 // ===== Импорты Firebase =====
 import { initializeApp } from "https://www.gstatic.com/firebasejs/11.0.1/firebase-app.js";
 import { getAuth, GoogleAuthProvider, signInWithPopup, onAuthStateChanged, signOut } from "https://www.gstatic.com/firebasejs/11.0.1/firebase-auth.js";
-import { getFirestore, collection, doc, serverTimestamp } from "https://www.gstatic.com/firebasejs/11.0.1/firebase-firestore.js";
+import { getFirestore, collection, doc, serverTimestamp, onSnapshot } from "https://www.gstatic.com/firebasejs/11.0.1/firebase-firestore.js";
 
 // ===== Импорты из модулей =====
 import { resources, updateResourcePanel, addXP, schedulePlayerSave } from './resources.js';
 import { startWorkersRealtime, hireWoodcutter, hireMiner, hireFermer, moveWorkers } from './worker.js';
-import { showToast, openMarket, closeMarket, openShop, closeShop } from './ui.js';   // 👈 добавлены openShop и closeShop
+import { showToast, openMarket, closeMarket, openShop, closeShop } from './ui.js';
 import { renderBuildingDoc, unrenderBuildingDoc, upgradeBuilding, deleteBuilding, upgradeBase, cookFood } from './buildings.js';
 import { map, initMap } from './map.js';
 
@@ -22,7 +22,7 @@ const firebaseConfig = {
 };
 const app = initializeApp(firebaseConfig);
 const auth = getAuth(app);
-const db = getFirestore(app);
+export const db = getFirestore(app);   // 👈 экспорт для ui.js
 
 // ===== Глобальные переменные =====
 let uid = null;
@@ -47,13 +47,12 @@ onAuthStateChanged(auth, async user => {
     logoutBtn.style.display = 'inline-block';
     playerDocRef = doc(db, 'players', uid);
     await ensurePlayerDoc();
-    startRealtime();
+    startRealtime();   // 👈 запуск подписок
   } else {
     uid = null;
     userName.textContent = '';
     loginBtn.textContent = 'Войти с Google';
     logoutBtn.style.display = 'none';
-    // Очистка (вызовы из модулей)
   }
 }, error => {
   showToast('Ошибка аутентификации: ' + error.message, [], 2500);
@@ -62,12 +61,26 @@ onAuthStateChanged(auth, async user => {
 // ===== Обеспечение профиля игрока =====
 async function ensurePlayerDoc(){
   if (!uid) return;
-  // ... (логика из оригинала)
+  // тут твоя логика создания документа игрока
 }
 
 // ===== Realtime слушатели =====
 function startRealtime(){
-  // ... (логика onSnapshot)
+  // Подписка на здания
+  const buildingsRef = collection(db, "buildings");
+  onSnapshot(buildingsRef, snapshot => {
+    snapshot.docChanges().forEach(change => {
+      if (change.type === "added") {
+        renderBuildingDoc(change.doc.id, change.doc.data());
+      }
+      if (change.type === "removed") {
+        unrenderBuildingDoc(change.doc.id);
+      }
+    });
+  });
+
+  // 👇 сюда же можно добавить подписки на игроков, воркеров и т.д.
+  startWorkersRealtime(db, uid);
 }
 
 // ===== Инит игры =====
@@ -76,7 +89,7 @@ updateResourcePanel();
 addXP(0);
 requestAnimationFrame(moveWorkers);
 
-// ===== Экспорт глобальных функций для window =====
+// ===== Экспорт глобальных функций =====
 window.hireWoodcutter = hireWoodcutter;
 window.hireMiner = hireMiner;
 window.hireFermer = hireFermer;
