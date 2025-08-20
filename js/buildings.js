@@ -24,17 +24,24 @@ export function renderBuildingDoc(id, data) {
   const url = data.iconUrl || BUILDING_ICONS[data.type] || BUILDING_ICONS.base;
 
   const icon = L.icon({ iconUrl: url, iconSize: [48, 48] });
-  const marker = L.marker([data.lat, data.lng], { icon }).addTo(map);
+  const existing = markers.get(id);
 
-  markers.set(id, marker);
+  if (existing) {
+    existing.setIcon(icon);
+    existing.setLatLng([data.lat, data.lng]);
+    existing.bindPopup(makePopupHtml({ id, ...data }));
+  } else {
+    const marker = L.marker([data.lat, data.lng], { icon }).addTo(map);
+    marker.bindPopup(makePopupHtml({ id, ...data }));
+    markers.set(id, marker);
+
+    // Спавн ресурсов только при постройке соответствующего здания
+    if (data.type === 'drovosekdom') spawnTreesBatch(6, data.lat, data.lng);
+    if (data.type === 'minehouse')   spawnRocksBatch(4, data.lat, data.lng);
+    if (data.type === 'fermerdom')   spawnCornBatch(8, data.lat, data.lng);
+  }
+
   buildingData.set(id, { ...data });
-
-  marker.bindPopup(makePopupHtml({ id, ...data }));
-
-  // Спавн ресурсов только при постройке соответствующего здания
-  if (data.type === 'drovosekdom') spawnTreesBatch(6, data.lat, data.lng);
-  if (data.type === 'minehouse')   spawnRocksBatch(4, data.lat, data.lng);
-  if (data.type === 'fermerdom')   spawnCornBatch(8, data.lat, data.lng);
 }
 
 // ===== Удаление здания =====

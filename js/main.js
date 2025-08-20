@@ -84,6 +84,9 @@ function startRealtime(){
       if (change.type === "added") {
         renderBuildingDoc(change.doc.id, change.doc.data());
       }
+      if (change.type === "modified") {
+        renderBuildingDoc(change.doc.id, change.doc.data());
+      }
       if (change.type === "removed") {
         unrenderBuildingDoc(change.doc.id);
       }
