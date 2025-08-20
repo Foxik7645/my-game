@@ -3,7 +3,7 @@
 // ================= Firebase (reuse existing app if main.js already init) =================
 import { initializeApp, getApps, getApp } from "https://www.gstatic.com/firebasejs/11.0.1/firebase-app.js";
 import { getStorage, ref, uploadString, getDownloadURL } from "https://www.gstatic.com/firebasejs/11.0.1/firebase-storage.js";
-import { getFirestore, doc, updateDoc } from "https://www.gstatic.com/firebasejs/11.0.1/firebase-firestore.js";
+import { getFirestore, doc, updateDoc, collection, addDoc, serverTimestamp } from "https://www.gstatic.com/firebasejs/11.0.1/firebase-firestore.js";
 
 // тот же конфиг, что и в main.js (не будет конфликтовать — см. getApps())
 const firebaseConfig = {
@@ -23,7 +23,7 @@ const db = getFirestore(app);
 // ================= Импорты локальных модулей =================
 import { map } from "./map.js";
 import { resources, updateResourcePanel } from "./resources.js";
-import { renderBuildingDoc } from "./buildings.js";
+import { renderBuildingDoc, isPointInBase } from "./buildings.js";
 
 // ================= Тосты =================
 const toasts = document.getElementById("toasts");
@@ -215,23 +215,35 @@ shopPanel.addEventListener("click", (e) => {
   const follow = (ev) => { ghost.setLatLng(ev.latlng); };
   map.on("mousemove", follow);
 
-  // один раз ставим здание по клику на карту
-  mapClickHandler = (ev) => {
+  // ставим здание по клику на карту
+  mapClickHandler = async (ev) => {
     map.off("mousemove", follow); // перестаём вести призрака
     const { lat, lng } = ev.latlng;
 
-    // списываем деньги только при реальной установке
+    // проверяем, что точка внутри базы
+    if (!isPointInBase(lat, lng)) {
+      showToast("Можно строить только внутри базы", [], 2000);
+      map.on("mousemove", follow);
+      return;
+    }
+
     resources.money -= cost; updateResourcePanel();
 
-    // рисуем локально (если нужна запись в Firestore — делай её здесь же)
-    const id = `local_${Date.now()}_${Math.floor(Math.random()*1e6)}`;
-    renderBuildingDoc(id, { id, type, lat, lng, level: 1 });
-
-    cancelPlacement();
-    closeShop();
-    showToast(`Поставлено: ${name} ✅`, [], 1600);
+    try {
+      const docRef = await addDoc(collection(db, "buildings"), {
+        type, lat, lng, level: 1, createdAt: serverTimestamp()
+      });
+      renderBuildingDoc(docRef.id, { id: docRef.id, type, lat, lng, level: 1 });
+      cancelPlacement();
+      closeShop();
+      showToast(`Поставлено: ${name} ✅`, [], 1600);
+    } catch (err) {
+      resources.money += cost; updateResourcePanel();
+      showToast("Ошибка постановки: " + (err?.message || err), [], 2500);
+      map.on("mousemove", follow);
+    }
   };
-  map.once("click", mapClickHandler);
+  map.on("click", mapClickHandler);
 
   showToast(`Режим постановки: ${name}. Кликни по карте. Нажми Esc — отмена.`, [], 3000);
 });
