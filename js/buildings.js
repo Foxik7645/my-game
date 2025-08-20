@@ -1,45 +1,32 @@
-import { showToast } from './ui.js';
-import { resources, schedulePlayerSave } from './resources.js';
-
-// ===== Константы зданий =====
-export const BASE_LEVELS = { /* ... */ };
-// ... (DROVOSEKDOM_LEVELS и т.д.)
+import { map, spawnTreesBatch, spawnRocksBatch, spawnCornBatch } from './map.js';
 
 // ===== Маркеры и данные =====
 export const markers = new Map();
 export const buildingData = new Map();
-// ... (selectedMarkers, otherBaseZones, baseMarker, baseZone, baseMeta)
 
-// ===== Функции зданий =====
+// ===== Функция отрисовки здания =====
 export function renderBuildingDoc(id, data){
-  // ... (логика отрисовки)
-}
+  if(!map) return;
 
-export function unrenderBuildingDoc(id){
-  // ... 
-}
+  const icon = L.icon({
+    iconUrl: `./images/${data.type}.png`,
+    iconSize: [48,48]
+  });
 
-export function makePopupHtml(b){
-  // ... (HTML попапа)
-}
+  const marker = L.marker([data.lat, data.lng], { icon }).addTo(map);
+  markers.set(id, marker);
+  buildingData.set(id, data);
 
-export function upgradeBuilding(id){
-  // ... 
-}
+  marker.bindPopup(`<b>${data.type}</b> (Lv.${data.level||1})`);
 
-export function deleteBuilding(id){
-  // ... (с удалением рабочих)
-}
-
-export function upgradeBase(){
-  // ... 
-}
-
-export function cookFood(buildingId){
-  // ... 
-}
-
-// ===== Кухня поллер =====
-function startKitchenPoller(){
-  // ... (setInterval для кухни)
+  // === Спавн ресурсов по типу здания ===
+  if(data.type === "drovosekdom"){
+    spawnTreesBatch(6, data.lat, data.lng);
+  }
+  if(data.type === "minehouse"){
+    spawnRocksBatch(4, data.lat, data.lng);
+  }
+  if(data.type === "fermerdom"){
+    spawnCornBatch(8, data.lat, data.lng);
+  }
 }
