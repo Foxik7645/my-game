@@ -6,9 +6,9 @@ import { getFirestore, collection, doc, serverTimestamp } from "https://www.gsta
 // ===== Импорты из модулей =====
 import { resources, updateResourcePanel, addXP, schedulePlayerSave } from './resources.js';
 import { startWorkersRealtime, hireWoodcutter, hireMiner, hireFermer, moveWorkers } from './worker.js';
-import { showToast, openMarket, closeMarket } from './ui.js';
+import { showToast, openMarket, closeMarket, openShop, closeShop } from './ui.js';   // 👈 добавлены openShop и closeShop
 import { renderBuildingDoc, unrenderBuildingDoc, upgradeBuilding, deleteBuilding, upgradeBase, cookFood } from './buildings.js';
-import { map, initMap, spawnTreesBatch, spawnRocksBatch, spawnCornBatch } from './map.js';
+import { map, initMap } from './map.js';
 
 // ===== Конфиг Firebase =====
 const firebaseConfig = {
@@ -54,7 +54,6 @@ onAuthStateChanged(auth, async user => {
     loginBtn.textContent = 'Войти с Google';
     logoutBtn.style.display = 'none';
     // Очистка (вызовы из модулей)
-    // ... (очистка слушателей, маркеров и т.д. из оригинала)
   }
 }, error => {
   showToast('Ошибка аутентификации: ' + error.message, [], 2500);
@@ -68,16 +67,16 @@ async function ensurePlayerDoc(){
 
 // ===== Realtime слушатели =====
 function startRealtime(){
-  // ... (логика onSnapshot для players, buildings, workers из оригинала, с вызовами renderBuildingDoc и т.д.)
+  // ... (логика onSnapshot)
 }
 
 // ===== Инит игры =====
-initMap();  // Инициализация карты
+initMap();  
 updateResourcePanel(); 
 addXP(0);
 requestAnimationFrame(moveWorkers);
 
-// Экспорт глобальных функций для window (из попапов)
+// ===== Экспорт глобальных функций для window =====
 window.hireWoodcutter = hireWoodcutter;
 window.hireMiner = hireMiner;
 window.hireFermer = hireFermer;
@@ -85,10 +84,10 @@ window.upgradeBuilding = upgradeBuilding;
 window.deleteBuilding = deleteBuilding;
 window.upgradeBase = upgradeBase;
 window.cookFood = cookFood;
-window.editBuilding = editBuilding;  // Из ui.js
+window.editBuilding = editBuilding;
 
-// UI
+// ===== UI =====
 window.openMarket = openMarket;
 window.closeMarket = closeMarket;
-window.openShop = openShop;
-window.closeShop = closeShop;
+window.openShop = openShop;   
+window.closeShop = closeShop; 
