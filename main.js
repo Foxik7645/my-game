@@ -1,4 +1,4 @@
-// main.js (updated)
+// main.js (COOP-safe auth; popup when possible, otherwise redirect)
 /* ---------- Firebase ---------- */
 import {
   auth,
@@ -36,15 +36,27 @@ const profileIdSpan = document.getElementById('profileId');
 const profileAvatarDiv = document.getElementById('profileAvatar');
 const profileSave = document.getElementById('profileSave');
 const profileCancel = document.getElementById('profileCancel');
+
+// Provider (можно включить выбор аккаунта)
+// const provider = new GoogleAuthProvider().setCustomParameters({ prompt: "select_account" });
 const provider = new GoogleAuthProvider();
+
+// Обработка результатов редиректа (если он был)
 getRedirectResult(auth).catch(e => {
   if (e && e.code !== 'auth/no-auth-event') {
     showToast('Ошибка входа: ' + (e?.message || e), [], 2500);
   }
 });
+
+// Унифицированный вход: если страница cross-origin isolated (COOP: same-origin + COEP),
+// попапы работать не будут — сразу уходим в redirect.
 loginBtn.onclick = async () => {
   try {
-    // Try popup first (works without 3rd-party cookies)
+    if (window.crossOriginIsolated) {
+      await signInWithRedirect(auth, provider);
+      return;
+    }
+    // 1) пробуем popup
     await signInWithPopup(auth, provider);
   } catch (err) {
     const code = err?.code || '';
@@ -52,7 +64,10 @@ loginBtn.onclick = async () => {
       code === 'auth/popup-blocked' ||
       code === 'auth/popup-closed-by-user' ||
       code === 'auth/cancelled-popup-request' ||
-      code === 'auth/operation-not-supported-in-this-environment';
+      code === 'auth/operation-not-supported-in-this-environment' ||
+      // На некоторых конфигурациях COOP/COEP Firebase кидает общий operation-not-supported
+      /popup|opener|close/i.test(err?.message || '');
+
     if (shouldFallbackToRedirect) {
       try {
         await signInWithRedirect(auth, provider);
@@ -65,6 +80,7 @@ loginBtn.onclick = async () => {
     }
   }
 };
+
 logoutBtn.onclick = async () => { try{ await signOut(auth); }catch(e){} };
 
 function openProfile(){
