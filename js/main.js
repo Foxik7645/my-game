@@ -8,7 +8,7 @@ import { resources, updateResourcePanel, addXP, schedulePlayerSave, setPlayerRef
 import { startWorkersRealtime, hireWoodcutter, hireMiner, hireFermer, moveWorkers } from './worker.js';
 import { showToast, openMarket, closeMarket, openShop, closeShop, editBuilding } from './ui.js';
 import { renderBuildingDoc, unrenderBuildingDoc, upgradeBuilding, deleteBuilding, upgradeBase, cookFood } from './buildings.js';
-import { map, initMap } from './map.js';
+import { map, initMap, spawnTreesBatch, spawnRocksBatch, spawnCornBatch } from './map.js';
 
 // ===== Конфиг Firebase =====
 const firebaseConfig = {
@@ -95,10 +95,15 @@ function startRealtime(){
 }
 
 // ===== Инит игры =====
-initMap();  
-updateResourcePanel(); 
+initMap();
+updateResourcePanel();
 addXP(0);
 requestAnimationFrame(moveWorkers);
+
+// Периодическое пополнение ресурсов
+setInterval(spawnTreesBatch, 30000);
+setInterval(spawnRocksBatch, 30000);
+setInterval(spawnCornBatch, 30000);
 
 // ===== Экспорт глобальных функций =====
 window.hireWoodcutter = hireWoodcutter;

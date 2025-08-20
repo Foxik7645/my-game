@@ -16,6 +16,17 @@ const BUILDING_ICONS = {
 export const markers = new Map();       // id -> Leaflet marker
 export const buildingData = new Map();  // id -> {type, lat, lng, level, iconUrl?, ...}
 
+// ===== Хелпер для получения координат домов заданного типа =====
+export function getDomAnchors(type) {
+  const arr = [];
+  buildingData.forEach(b => {
+    if (b.type === type) {
+      arr.push({ lat: b.lat, lng: b.lng, level: b.level || 1 });
+    }
+  });
+  return arr;
+}
+
 // ===== Отрисовка здания =====
 export function renderBuildingDoc(id, data) {
   if (!map) return;
@@ -32,9 +43,9 @@ export function renderBuildingDoc(id, data) {
   marker.bindPopup(makePopupHtml({ id, ...data }));
 
   // Спавн ресурсов только при постройке соответствующего здания
-  if (data.type === 'drovosekdom') spawnTreesBatch(6, data.lat, data.lng);
-  if (data.type === 'minehouse')   spawnRocksBatch(4, data.lat, data.lng);
-  if (data.type === 'fermerdom')   spawnCornBatch(8, data.lat, data.lng);
+  if (data.type === 'drovosekdom') spawnTreesBatch();
+  if (data.type === 'minehouse')   spawnRocksBatch();
+  if (data.type === 'fermerdom')   spawnCornBatch();
 }
 
 // ===== Удаление здания =====
