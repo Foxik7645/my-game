@@ -73,11 +73,8 @@ function startRealtime(){
 
 // ===== Инит игры =====
 initMap();  // Инициализация карты
-updateResourcePanel(); addXP(0);
-spawnTreesBatch(); spawnRocksBatch(); spawnCornBatch();
-setInterval(spawnTreesBatch, 60000);  // TREE_SPAWN_INTERVAL_MS
-setInterval(spawnRocksBatch, 60000);
-setInterval(spawnCornBatch, 60000);
+updateResourcePanel(); 
+addXP(0);
 requestAnimationFrame(moveWorkers);
 
 // Экспорт глобальных функций для window (из попапов)
