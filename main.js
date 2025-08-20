@@ -1,5 +1,26 @@
 /* ---------- Firebase ---------- */
-import { auth, db, GoogleAuthProvider, signInWithPopup, onAuthStateChanged, signOut, collection, addDoc, onSnapshot, doc, setDoc, getDoc, updateDoc, deleteDoc, serverTimestamp, getDocs, query, where } from "./firebaseConfig.js";
+import {
+  auth,
+  db,
+  GoogleAuthProvider,
+  signInWithPopup,
+  onAuthStateChanged,
+  signOut,
+  signInWithRedirect,
+  getRedirectResult,
+  collection,
+  addDoc,
+  onSnapshot,
+  doc,
+  setDoc,
+  getDoc,
+  updateDoc,
+  deleteDoc,
+  serverTimestamp,
+  getDocs,
+  query,
+  where
+} from "./firebaseConfig.js";
 
 /* ---------- Auth UI ---------- */
 const loginBtn = document.getElementById('loginBtn');
@@ -14,9 +35,26 @@ const profileIdSpan = document.getElementById('profileId');
 const profileAvatarDiv = document.getElementById('profileAvatar');
 const profileSave = document.getElementById('profileSave');
 const profileCancel = document.getElementById('profileCancel');
+const provider = new GoogleAuthProvider();
+getRedirectResult(auth).catch(e => {
+  if (e && e.code !== 'auth/no-auth-event') {
+    showToast('Ошибка входа: ' + (e?.message || e), [], 2500);
+  }
+});
 loginBtn.onclick = async () => {
-  try { await signInWithPopup(auth, new GoogleAuthProvider()); }
-  catch (e) { showToast('Ошибка входа: ' + (e?.message||e), [], 2500); }
+  try {
+    await signInWithPopup(auth, provider);
+  } catch (e) {
+    if (e?.code === 'auth/popup-blocked' || e?.code === 'auth/popup-closed-by-user' || e?.code === 'auth/operation-not-supported-in-this-environment') {
+      try {
+        await signInWithRedirect(auth, provider);
+      } catch (err) {
+        showToast('Ошибка входа: ' + (err?.message || err), [], 2500);
+      }
+    } else {
+      showToast('Ошибка входа: ' + (e?.message || e), [], 2500);
+    }
+  }
 };
 logoutBtn.onclick = async () => { try{ await signOut(auth); }catch(e){} };
 
