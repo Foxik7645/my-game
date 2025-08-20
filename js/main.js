@@ -6,7 +6,7 @@ import { getFirestore, collection, doc, serverTimestamp, onSnapshot } from "http
 // ===== Импорты из модулей =====
 import { resources, updateResourcePanel, addXP, schedulePlayerSave } from './resources.js';
 import { startWorkersRealtime, hireWoodcutter, hireMiner, hireFermer, moveWorkers } from './worker.js';
-import { showToast, openMarket, closeMarket, openShop, closeShop } from './ui.js';
+import { showToast, openMarket, closeMarket, openShop, closeShop, editBuilding } from './ui.js';
 import { renderBuildingDoc, unrenderBuildingDoc, upgradeBuilding, deleteBuilding, upgradeBase, cookFood } from './buildings.js';
 import { map, initMap } from './map.js';
 
@@ -79,7 +79,7 @@ function startRealtime(){
     });
   });
 
-  // 👇 сюда же можно добавить подписки на игроков, воркеров и т.д.
+  // Подписка на рабочих (если реализовано в worker.js)
   startWorkersRealtime(db, uid);
 }
 
@@ -93,11 +93,12 @@ requestAnimationFrame(moveWorkers);
 window.hireWoodcutter = hireWoodcutter;
 window.hireMiner = hireMiner;
 window.hireFermer = hireFermer;
+
 window.upgradeBuilding = upgradeBuilding;
 window.deleteBuilding = deleteBuilding;
 window.upgradeBase = upgradeBase;
 window.cookFood = cookFood;
-window.editBuilding = editBuilding;
+window.editBuilding = editBuilding;   // 👈 теперь тоже глобально
 
 // ===== UI =====
 window.openMarket = openMarket;
