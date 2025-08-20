@@ -55,9 +55,10 @@ if (marketCancel) marketCancel.addEventListener('click', closeMarket);
 if (overlay) overlay.addEventListener('click', closeMarket);
 
 function updateMarketUI() {
-  document.getElementById('m-packs').textContent = sellPacks;
   const have = resources[selectedResource] || 0;
   const rate = marketRates[selectedResource] || 0;
+
+  document.getElementById('m-packs').textContent = `${sellPacks} (${sellPacks*10} ${emoji(selectedResource)})`;
   document.getElementById('m-rate').textContent = `10 ${emoji(selectedResource)} = ${rate} 💰`;
   document.getElementById('m-have').textContent = have;
   document.getElementById('m-get').textContent = sellPacks * rate;
@@ -120,6 +121,7 @@ const shopClose = document.getElementById('shopClose');
 
 export function openShop(){
   shopPanel.style.display = 'block';
+  shopPanel.style.zIndex = 1000; // поверх карты
 }
 export function closeShop(){
   shopPanel.style.display = 'none';
@@ -128,10 +130,9 @@ export function closeShop(){
 if (shopToggle) shopToggle.addEventListener('click', openShop);
 if (shopClose) shopClose.addEventListener('click', closeShop);
 
-// кнопки "Купить" в магазине
-const buyButtons = document.querySelectorAll('.buyBtn');
-buyButtons.forEach(btn => {
-  btn.addEventListener('click', (e) => {
+// делегирование событий на кнопки "Купить"
+document.addEventListener('click', (e) => {
+  if (e.target.classList.contains('buyBtn')) {
     const card = e.target.closest('.card');
     const type = card.dataset.type;
     const cost = parseInt(card.dataset.cost) || 0;
@@ -141,11 +142,11 @@ buyButtons.forEach(btn => {
       updateResourcePanel();
       showToast(`Куплено здание: ${type} за ${cost} 💰`);
       closeShop();
-      // тут можно вызвать функцию, которая реально строит здание
+      // тут можно вызвать placeBuilding(type), чтобы реально построить
     } else {
       showToast(`Недостаточно 💰 для покупки ${type}`);
     }
-  });
+  }
 });
 
 // ===== Editor спрайта =====
