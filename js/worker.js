@@ -1,13 +1,11 @@
 import { resources, schedulePlayerSave, addXP } from './resources.js';
 import { showToast } from './ui.js';
-import { WORKER_COST_FOOD, WORKER_DURATION_MS } from './constants.js';  // Если добавишь constants.js, иначе hardcode
+import { WORKER_COST_FOOD, WORKER_DURATION_MS, WC_FRAMES, MINER_FRAMES, FERM_FRAMES } from './constants.js';  // Если добавишь constants.js, иначе hardcode
 
 // ===== Константы рабочих =====
-const WC_FRAMES = ['./images/Drovosek1.png','./images/Drovosek2.png','./images/Drovosek3.png','./images/Drovosek4.png'];
-const MINER_FRAMES= ['./images/Miner1.png','./images/Miner2.png','./images/Miner3.png','./images/Miner4.png'];
-const FERM_FRAMES = ['./images/ferma1.png','./images/ferma2.png','./images/ferma3.png','./images/ferma4.png'];
 const IDLE_INDEX = 1, FRAME_INTERVAL_MS = 160;
 const STEP_SPEED = 0.0009, ARRIVE_EPS = 0.00008;
+export const FRAME_SETS = { woodcutter: WC_FRAMES, miner: MINER_FRAMES, farmer: FERM_FRAMES };
 
 // ===== Сеты рабочих =====
 export const woodcuttersByHome = new Map();
