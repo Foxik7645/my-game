@@ -312,6 +312,3 @@ saveSpriteBtn.onclick = async () => {
     showToast("Ошибка сохранения: " + (err?.message || err), [], 3000);
   }
 };
-
-// ====================== Экспорт для main.js (глобальные кнопки) ======================
-export { openMarket, closeMarket, openShop, closeShop, editBuilding };
