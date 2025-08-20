@@ -52,7 +52,7 @@ export const DROVOSEKDOM_LEVELS = {
   4: { icon: 144, cost: 1050, workers: 15, paint: 96 },
 };
 export const MINEHOUSE_LEVELS = JSON.parse(JSON.stringify(DROVOSEKDOM_LEVELS));
-export const FERMERVOM_LEVELS = JSON.parse(JSON.stringify(DROVOSEKDOM_LEVELS));
+export const FERMERDOM_LEVELS = JSON.parse(JSON.stringify(DROVOSEKDOM_LEVELS));
 export const HOUSEEAT_LEVELS = {
   1: { icon: 112, cost: 200, cookMs: 60_000, paint: 72 },
   2: { icon: 128, cost: 400, cookMs: 45_000, paint: 84 },
@@ -120,7 +120,7 @@ export function iconSpecForType(type, level=1){
   const table = type==='houseeat'?HOUSEEAT_LEVELS
               : type==='drovosekdom'?DROVOSEKDOM_LEVELS
               : type==='minehouse'?MINEHOUSE_LEVELS
-              : FERMERVOM_LEVELS;
+              : FERMERDOM_LEVELS;
   const lvl = table[level] || table[1];
   return {size:[lvl.icon,lvl.icon], anchor:[lvl.icon/2,lvl.icon/2]};
 }
@@ -136,7 +136,7 @@ export function nextBaseCost(){ return (baseMeta.level>=4)?null:BASE_LEVELS[base
 export function nextCostFor(b){
   if(b.type==='drovosekdom') return (b.level>=4)?null:DROVOSEKDOM_LEVELS[b.level+1].cost;
   if(b.type==='minehouse') return (b.level>=4)?null:MINEHOUSE_LEVELS[b.level+1].cost;
-  if(b.type==='fermerdom') return (b.level>=4)?null:FERMERVOM_LEVELS[b.level+1].cost;
+  if(b.type==='fermerdom') return (b.level>=4)?null:FERMERDOM_LEVELS[b.level+1].cost;
   if(b.type==='houseeat') return (b.level>=4)?null:HOUSEEAT_LEVELS[b.level+1].cost;
   return null;
 }
@@ -189,7 +189,7 @@ export function makePopupHtml(b){
     workersText = `<br/>Рабочие: ${set.size}/${max} (наём: ${WORKER_COST_FOOD} 🍔 • 5 мин)`;
   } else if(b.type==='fermerdom'){
     const set = farmersByHome.get(b.id) || new Set();
-    const max = FERMERVOM_LEVELS[b.level].workers;
+    const max = FERMERDOM_LEVELS[b.level].workers;
     workersText = `<br/>Рабочие: ${set.size}/${max} (наём: ${WORKER_COST_FOOD} 🍔 • 5 мин)`;
   }
   const hireWood = (canEdit && b.type==='drovosekdom') ? `<button onclick="hireWoodcutter('${b.id}')">Нанять дровосека (−${WORKER_COST_FOOD} 🍔)</button>` : '';
@@ -349,7 +349,7 @@ async function hireWorker(homeId, type){
   const b = buildingData.get(homeId);
   if(!b || b.owner!==uid || b.type!==type) return;
   const sets = type==='drovosekdom'?woodcuttersByHome:type==='minehouse'?minersByHome:farmersByHome;
-  const levels = type==='drovosekdom'?DROVOSEKDOM_LEVELS:type==='minehouse'?MINEHOUSE_LEVELS:FERMERVOM_LEVELS;
+  const levels = type==='drovosekdom'?DROVOSEKDOM_LEVELS:type==='minehouse'?MINEHOUSE_LEVELS:FERMERDOM_LEVELS;
   const set = sets.get(homeId) || new Set();
   const max = levels[b.level]?.workers || 0;
   if(set.size >= max) return showToast('Максимум рабочих.', [], 1500);
