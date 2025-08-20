@@ -28,7 +28,7 @@ const firebaseConfig = {
 
 const app = initializeApp(firebaseConfig);
 const auth = getAuth(app);
-// Persist session on this origin (works well with popup)
+// Persist session on this origin (works well with popup or redirect)
 await setPersistence(auth, browserLocalPersistence);
 
 const db = getFirestore(app);
