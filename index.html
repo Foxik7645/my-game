@@ -178,6 +178,7 @@
 import { initializeApp } from "https://www.gstatic.com/firebasejs/11.0.1/firebase-app.js";
 import { getAuth, GoogleAuthProvider, signInWithPopup, onAuthStateChanged, signOut } from "https://www.gstatic.com/firebasejs/11.0.1/firebase-auth.js";
 import { getFirestore, collection, addDoc, onSnapshot, doc, setDoc, getDoc, updateDoc, deleteDoc, serverTimestamp, getDocs, query, where } from "https://www.gstatic.com/firebasejs/11.0.1/firebase-firestore.js";
+import { DROVOSEKDOM_LEVELS, MINEHOUSE_LEVELS, FERMERVOM_LEVELS, HOUSEEAT_LEVELS } from "./js/buildings/config.js";
 
 /* Config */
 const firebaseConfig = {
@@ -301,20 +302,6 @@ const BASE_LEVELS = {
   2: { radius: 220, icon: 148, cost: 200, paint: 64 },
   3: { radius: 300, icon: 176, cost: 500, paint: 128 },
   4: { radius: 380, icon: 208, cost: 1000, paint: 256 },
-};
-const DROVOSEKDOM_LEVELS = {
-  1: { icon: 96, cost: 150, workers: 3, paint: 60 },
-  2: { icon: 112, cost: 350, workers: 5, paint: 72 },
-  3: { icon: 128, cost: 650, workers: 9, paint: 84 },
-  4: { icon: 144, cost: 1050, workers: 15, paint: 96 },
-};
-const MINEHOUSE_LEVELS = JSON.parse(JSON.stringify(DROVOSEKDOM_LEVELS));
-const FERMERVOM_LEVELS = JSON.parse(JSON.stringify(DROVOSEKDOM_LEVELS));
-const HOUSEEAT_LEVELS = {
-  1: { icon: 112, cost: 200, cookMs: 60_000, paint: 72 },
-  2: { icon: 128, cost: 400, cookMs: 45_000, paint: 84 },
-  3: { icon: 144, cost: 700, cookMs: 30_000, paint: 96 },
-  4: { icon: 160, cost: 1100, cookMs: 20_000, paint: 112 }
 };
 
 function randomBrightColor(){ const h = Math.floor(Math.random()*360); return `hsl(${h} 95% 60%)`; }
