@@ -1400,4 +1400,4 @@ window.__game = {
       const el=document.querySelector(selector);
       if(el){ el.classList.add('highlight-tut','pulse'); el.scrollIntoView?.({block:'center',behavior:'smooth'}); }
     }
-  };
+  }
