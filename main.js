@@ -585,7 +585,7 @@ function getDomAnchors(type){
     }
   });
   return anchors;
-} });
+});
   return anchors;
 }
 function spawnTreesBatch(){
