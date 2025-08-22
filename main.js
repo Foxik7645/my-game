@@ -438,6 +438,15 @@ function renderBuildingDoc(id, data){
       if(b.type==='minehouse'   && !minersByHome.has(id))      minersByHome.set(id, new Set());
       if(b.type==='fermerdom'   && !farmersByHome.has(id))     farmersByHome.set(id, new Set());
     }
+    
+     // >>> hook для tutorial.js: сообщаем о добавлении моего здания
+    try {
+      if (b.owner === uid) {
+        window.dispatchEvent(new CustomEvent('mg:building-added', { detail: b }));
+      }
+    } catch {}
+    // <<<
+    
   } else {
     const marker = markers.get(id);
     const prev = buildingData.get(id);
@@ -472,21 +481,6 @@ function unrenderBuildingDoc(id){
     const zone = otherBaseZones.get(id); zone?.remove(); otherBaseZones.delete(id);
   }
 }    
-markers.set(id, marker);
-    buildingData.set(id, b);
-    if(b.owner===uid){
-      if(b.type==='drovosekdom' && !woodcuttersByHome.has(id)) woodcuttersByHome.set(id, new Set());
-      if(b.type==='minehouse'   && !minersByHome.has(id))      minersByHome.set(id, new Set());
-      if(b.type==='fermerdom'   && !farmersByHome.has(id))     farmersByHome.set(id, new Set());
-    }
-
-    // >>> hook для tutorial.js
-    try {
-      if (b.owner === uid) {
-        window.dispatchEvent(new CustomEvent('mg:building-added', { detail: b }));
-      }
-    } catch {}
-    // <<<
 
 /* ---------- Firestore listeners ---------- */
 let buildingsUnsub = null;
