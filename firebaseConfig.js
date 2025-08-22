@@ -1,3 +1,4 @@
+// firebaseConfig.js
 import { initializeApp } from "https://www.gstatic.com/firebasejs/11.0.1/firebase-app.js";
 import {
   getAuth,
@@ -5,22 +6,31 @@ import {
   onAuthStateChanged,
   signOut,
   signInWithRedirect,
-  getRedirectResult
+  getRedirectResult,
+  signInWithPopup,
+  setPersistence,
+  browserLocalPersistence,
 } from "https://www.gstatic.com/firebasejs/11.0.1/firebase-auth.js";
-import { getFirestore, collection, addDoc, onSnapshot, doc, setDoc, getDoc, updateDoc, deleteDoc, serverTimestamp, getDocs, query, where } from "https://www.gstatic.com/firebasejs/11.0.1/firebase-firestore.js";
+import {
+  getFirestore, collection, addDoc, onSnapshot, doc, setDoc, getDoc,
+  updateDoc, deleteDoc, serverTimestamp, getDocs, query, where
+} from "https://www.gstatic.com/firebasejs/11.0.1/firebase-firestore.js";
 
 const firebaseConfig = {
   apiKey: "AIzaSyC-cKsUyDM2H1Hs3ouKjRjO2Vxg9QvC880",
   authDomain: "gamemap-84ae8.firebaseapp.com",
   projectId: "gamemap-84ae8",
-  storageBucket: "gamemap-84ae8.firebasestorage.app",
+  storageBucket: "gamemap-84ae8.appspot.com",
   messagingSenderId: "198147414309",
   appId: "1:198147414309:web:33b340d6bf6dbd3d01a2cc",
-  measurementId: "G-M2TKZCT4LT"
+  measurementId: "G-M2TKZCT4LT",
 };
 
 const app = initializeApp(firebaseConfig);
 const auth = getAuth(app);
+// Persist session on this origin (works well with popup or redirect)
+await setPersistence(auth, browserLocalPersistence);
+
 const db = getFirestore(app);
 
 export {
@@ -31,6 +41,7 @@ export {
   signOut,
   signInWithRedirect,
   getRedirectResult,
+  signInWithPopup,
   collection,
   addDoc,
   onSnapshot,
