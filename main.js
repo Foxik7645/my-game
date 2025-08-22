@@ -578,10 +578,26 @@ function pickPointNear(latlng, maxM, minM){
            lng: latlng.lng + metersToLng(r*Math.cos(ang), latlng.lat) };
 }
 function getDomAnchors(type){
-  const anchors=[]; buildingData.forEach((b,id)=>{ if(b.type===type){ const m=markers.get(id); if(m) anchors.push(m.getLatLng()); } });
+  const anchors=[];
+  buildingData.forEach((b,id)=>{
+    if(b.type===type && b.owner===uid){
+      const m=markers.get(id);
+      if(m) anchors.push(m.getLatLng());
+    }
+  });
   return anchors;
 }
+
+function pruneForeignResources(map){
+  map.forEach((r,id)=>{
+    if(r.owner!==uid){
+      r.marker?.remove();
+      map.delete(id);
+    }
+  });
+}
 function spawnTreesBatch(){
+  pruneForeignResources(trees);
   const anchors = getDomAnchors('drovosekdom'); if(anchors.length===0) return;
   const totalWorkers = getTotalWorkers('drovosekdom');
   const totalLevel = getTotalHouseLevel('drovosekdom');
@@ -594,10 +610,11 @@ function spawnTreesBatch(){
     const id = crypto.randomUUID?.() || Math.random().toString(36).slice(2);
     const m = L.marker([pt.lat, pt.lng], {icon: TREE_ICONS[Math.floor(Math.random()*TREE_ICONS.length)]}).addTo(map);
     setMarkerHidden(m, !isSpriteZoomVisible(map.getZoom()));
-    trees.set(id, {id, marker:m, lat:pt.lat, lng:pt.lng});
+    trees.set(id, {id, owner: uid, marker:m, lat:pt.lat, lng:pt.lng});
   }
 }
 function spawnRocksBatch(){
+  pruneForeignResources(rocks);
   const anchors = getDomAnchors('minehouse'); if(anchors.length===0) return;
   const totalWorkers = getTotalWorkers('minehouse');
   const totalLevel = getTotalHouseLevel('minehouse');
@@ -610,10 +627,11 @@ function spawnRocksBatch(){
     const id = crypto.randomUUID?.() || Math.random().toString(36).slice(2);
     const m = L.marker([pt.lat, pt.lng], {icon: ROCK_ICONS[Math.floor(Math.random()*ROCK_ICONS.length)]}).addTo(map);
     setMarkerHidden(m, !isSpriteZoomVisible(map.getZoom()));
-    rocks.set(id, {id, marker:m, lat:pt.lat, lng:pt.lng});
+    rocks.set(id, {id, owner: uid, marker:m, lat:pt.lat, lng:pt.lng});
   }
 }
 function spawnCornBatch(){
+  pruneForeignResources(corn);
   const anchors = getDomAnchors('fermerdom'); if(anchors.length===0) return;
   const totalWorkers = getTotalWorkers('fermerdom');
   const totalLevel = getTotalHouseLevel('fermerdom');
@@ -626,7 +644,7 @@ function spawnCornBatch(){
     const id = crypto.randomUUID?.() || Math.random().toString(36).slice(2);
     const m = L.marker([pt.lat, pt.lng], {icon: CORN_ICONS[Math.floor(Math.random()*CORN_ICONS.length)]}).addTo(map);
     setMarkerHidden(m, !isSpriteZoomVisible(map.getZoom()));
-    corn.set(id, {id, marker:m, lat:pt.lat, lng:pt.lng});
+    corn.set(id, {id, owner: uid, marker:m, lat:pt.lat, lng:pt.lng});
   }
 }
 
@@ -645,6 +663,7 @@ function makeWorkerDiv(frameUrl, flipped){
 function nearestTarget(latlng, collectionMap){
   let best=null, bestD=Infinity;
   collectionMap.forEach(t=>{
+    if(t.owner!==uid) return;
     const d = Math.abs(t.lat - latlng.lat) + Math.abs(t.lng - latlng.lng);
     if(d<bestD){ best=t; bestD=d; }
   });
