@@ -209,7 +209,7 @@
 
 <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js" defer></script>
 <script type="module" src="main.js"></script>
-  <!-- === Tutorial overlay (Советник короля) === -->
+ <!-- === Tutorial overlay (Советник короля) === -->
 <style>
   #tutorialOverlay{position:fixed;inset:0;background:rgba(0,0,0,.78);z-index:3000;display:none;align-items:center;justify-content:center;flex-direction:column;color:#fff;text-align:center;padding:20px}
   #tutorialOverlay .card{background:#232323;border:1px solid #4a4a4a;border-radius:14px;box-shadow:0 12px 28px rgba(0,0,0,.45);padding:18px 22px;max-width:680px}
@@ -231,8 +231,8 @@
     </div>
   </div>
 </div>
-
-<!-- подключаем модуль обучения ПОВЕРХ main.js -->
-<script type="module" src="./js/tutorial.js"></script>
+  
+<script type="module" src="./main.js"></script>
+<script type="module" src="./tutorial.js"></script>
 </body>
 </html>
