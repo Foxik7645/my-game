@@ -578,10 +578,18 @@ function pickPointNear(latlng, maxM, minM){
            lng: latlng.lng + metersToLng(r*Math.cos(ang), latlng.lat) };
 }
 function getDomAnchors(type){
-  const anchors=[]; buildingData.forEach((b,id)=>{ if(b.type===type){ const m=markers.get(id); if(m) anchors.push(m.getLatLng()); } });
+  const anchors=[];
+  buildingData.forEach((b,id)=>{
+    if(b.type===type && b.owner===uid){
+      const m=markers.get(id); if(m) anchors.push(m.getLatLng());
+    }
+  });
+  return anchors;
+} });
   return anchors;
 }
 function spawnTreesBatch(){
+  if(!uid) return; // wait for auth to know owner
   const anchors = getDomAnchors('drovosekdom'); if(anchors.length===0) return;
   const totalWorkers = getTotalWorkers('drovosekdom');
   const totalLevel = getTotalHouseLevel('drovosekdom');
@@ -594,10 +602,11 @@ function spawnTreesBatch(){
     const id = crypto.randomUUID?.() || Math.random().toString(36).slice(2);
     const m = L.marker([pt.lat, pt.lng], {icon: TREE_ICONS[Math.floor(Math.random()*TREE_ICONS.length)]}).addTo(map);
     setMarkerHidden(m, !isSpriteZoomVisible(map.getZoom()));
-    trees.set(id, {id, marker:m, lat:pt.lat, lng:pt.lng});
+    trees.set(id, {id, marker:m, lat:pt.lat, lng:pt.lng, owner: uid});
   }
 }
 function spawnRocksBatch(){
+  if(!uid) return; // wait for auth to know owner
   const anchors = getDomAnchors('minehouse'); if(anchors.length===0) return;
   const totalWorkers = getTotalWorkers('minehouse');
   const totalLevel = getTotalHouseLevel('minehouse');
@@ -610,10 +619,11 @@ function spawnRocksBatch(){
     const id = crypto.randomUUID?.() || Math.random().toString(36).slice(2);
     const m = L.marker([pt.lat, pt.lng], {icon: ROCK_ICONS[Math.floor(Math.random()*ROCK_ICONS.length)]}).addTo(map);
     setMarkerHidden(m, !isSpriteZoomVisible(map.getZoom()));
-    rocks.set(id, {id, marker:m, lat:pt.lat, lng:pt.lng});
+    rocks.set(id, {id, marker:m, lat:pt.lat, lng:pt.lng, owner: uid});
   }
 }
 function spawnCornBatch(){
+  if(!uid) return; // wait for auth to know owner
   const anchors = getDomAnchors('fermerdom'); if(anchors.length===0) return;
   const totalWorkers = getTotalWorkers('fermerdom');
   const totalLevel = getTotalHouseLevel('fermerdom');
@@ -626,7 +636,7 @@ function spawnCornBatch(){
     const id = crypto.randomUUID?.() || Math.random().toString(36).slice(2);
     const m = L.marker([pt.lat, pt.lng], {icon: CORN_ICONS[Math.floor(Math.random()*CORN_ICONS.length)]}).addTo(map);
     setMarkerHidden(m, !isSpriteZoomVisible(map.getZoom()));
-    corn.set(id, {id, marker:m, lat:pt.lat, lng:pt.lng});
+    corn.set(id, {id, marker:m, lat:pt.lat, lng:pt.lng, owner: uid});
   }
 }
 
@@ -642,9 +652,10 @@ function makeWorkerDiv(frameUrl, flipped){
   const html = `<div class="worker"><img src="${frameUrl}" class="${flipped?'flip-x':''}" draggable="false"/></div>`;
   return L.divIcon({ html, className:'', iconSize:[48,48], iconAnchor:[24,24] });
 }
-function nearestTarget(latlng, collectionMap){
+function nearestTarget(latlng, collectionMap, ownerId){
   let best=null, bestD=Infinity;
   collectionMap.forEach(t=>{
+    if(ownerId && t.owner && t.owner!==ownerId) return; // ignore other players' resources
     const d = Math.abs(t.lat - latlng.lat) + Math.abs(t.lng - latlng.lng);
     if(d<bestD){ best=t; bestD=d; }
   });
@@ -674,13 +685,14 @@ function setAdd(mapSet, key, value){
 function createWorkerFromDoc(workerId, homeId, type, expiresAtMs, localOnly=false){
   const homeMarker = markers.get(homeId); if(!homeMarker) return null;
   const homePos = homeMarker.getLatLng();
+  const homeOwner = (buildingData.get(homeId)||{}).owner || uid;
   const startAng=Math.random()*2*Math.PI, startR=randBetween(10,25);
   const lat=homePos.lat + metersToLat(startR)*Math.sin(startAng);
   const lng=homePos.lng + metersToLng(startR*Math.cos(startAng), homePos.lat);
   const frames = (type==='wood')?WC_FRAMES:(type==='miner')?MINER_FRAMES:FERM_FRAMES;
   const m=L.marker([lat,lng],{icon: makeWorkerDiv(frames[IDLE_INDEX], false)}).addTo(map);
   setMarkerHidden(m, !isSpriteZoomVisible(map.getZoom()));
-  m.worker = { id: workerId, type, state:'wander',
+  m.worker = { id: workerId, type, owner: homeOwner, state:'wander',
     target: pickWanderPointAround(homePos), speed: STEP_SPEED, selected:false, cargo:0,
     harvest:{targetId:null,startTs:0,durationMs:3000,ui:null}, anim:{frameIndex:IDLE_INDEX, accMs:0, facingRight:true},
     homeId, frames, expiresAt: expiresAtMs|| (Date.now()+WORKER_DURATION_MS) };
@@ -870,7 +882,7 @@ function moveWorkers(){
 
       if(w.state==='wander'){
         const pool = (type==='wood')?trees:(type==='miner')?rocks:corn;
-        if(pool.size>0){ const nt = nearestTarget(pos, pool); if(nt){ w.state='toTarget'; w.target={lat:nt.lat,lng:nt.lng}; w.harvest.targetId=nt.id; } }
+        if(pool.size>0){ const nt = nearestTarget(pos, pool, w.owner); if(nt){ w.state='toTarget'; w.target={lat:nt.lat,lng:nt.lng}; w.harvest.targetId=nt.id; } }
       }
       if(w.state==='toTarget'){
         const pool = (type==='wood')?trees:(type==='miner')?rocks:corn;
@@ -884,7 +896,7 @@ function moveWorkers(){
         if(Math.abs(dLng)>1e-8){ const goingRight=dLng>0; if(goingRight!==w.anim.facingRight){ w.anim.facingRight=goingRight; marker.setIcon(makeWorkerDiv(w.frames[w.anim.frameIndex], !w.anim.facingRight)); } }
         if(Math.abs(dLat)+Math.abs(dLng) < ARRIVE_EPS){
           if(w.state==='wander'){
-            const pool=(type==='wood')?trees:(type==='miner')?rocks:corn; const nt=nearestTarget(pos,pool);
+            const pool=(type==='wood')?trees:(type==='miner')?rocks:corn; const nt=nearestTarget(pos,pool,w.owner);
             if(nt){ w.state='toTarget'; w.target={lat:nt.lat,lng:nt.lng}; w.harvest.targetId=nt.id; } else { w.state='return'; }
           } else if(w.state==='toTarget'){
             const pool=(type==='wood')?trees:(type==='miner')?rocks:corn; const tgt=pool.get(w.harvest.targetId);
@@ -1330,6 +1342,12 @@ onAuthStateChanged(auth, async user => {
     if (userName) userName.textContent = '';
     if (loginBtn) loginBtn.textContent = 'Войти с Google';
     if (logoutBtn) logoutBtn.style.display='none';
+
+    // Clear local resource markers on logout
+    try { trees.forEach(t=>{ map.removeLayer(t.marker); }); trees.clear(); } catch {}
+    try { rocks.forEach(r=>{ map.removeLayer(r.marker); }); rocks.clear(); } catch {}
+    try { corn.forEach(c=>{ map.removeLayer(c.marker); }); corn.clear(); } catch {}
+
     if (profileBtn){ profileBtn.style.display='none'; profileBtn.style.backgroundImage=''; }
     profileNickname=''; profileAvatar='';
     buildingsUnsub?.(); playerUnsub?.(); workersUnsub?.();
