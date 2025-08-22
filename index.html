@@ -209,5 +209,30 @@
 
 <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js" defer></script>
 <script type="module" src="main.js"></script>
+  <!-- === Tutorial overlay (Советник короля) === -->
+<style>
+  #tutorialOverlay{position:fixed;inset:0;background:rgba(0,0,0,.78);z-index:3000;display:none;align-items:center;justify-content:center;flex-direction:column;color:#fff;text-align:center;padding:20px}
+  #tutorialOverlay .card{background:#232323;border:1px solid #4a4a4a;border-radius:14px;box-shadow:0 12px 28px rgba(0,0,0,.45);padding:18px 22px;max-width:680px}
+  #tutorialOverlay img{width:180px;image-rendering:pixelated;margin:0 auto 12px auto;display:block}
+  #tutorialOverlay .msg{font-family:'Press Start 2P', monospace;line-height:1.5;font-size:14px;margin:12px 0}
+  #tutorialOverlay .row{display:flex;gap:8px;justify-content:center;margin-top:12px}
+  .highlight-tut{outline:3px solid #ffd56a!important;box-shadow:0 0 16px #ffd56a!important}
+  @keyframes twinkle {0%{transform:scale(1)} 50%{transform:scale(1.04)} 100%{transform:scale(1)}}
+  .pulse{animation:twinkle 1s ease-in-out infinite}
+</style>
+
+<div id="tutorialOverlay" aria-live="polite">
+  <div class="card">
+    <img src="./images/Advisor.png" alt="Советник короля">
+    <div id="advisorMessage" class="msg"></div>
+    <div class="row">
+      <button id="tutorialNextBtn" class="pixel" style="background:#ffd56a;color:#222;border:none;border-radius:10px;padding:10px 16px;cursor:pointer">Далее</button>
+      <button id="tutorialSkipBtn" class="pixel" style="background:#444;color:#eee;border:none;border-radius:10px;padding:10px 16px;cursor:pointer">Пропустить</button>
+    </div>
+  </div>
+</div>
+
+<!-- подключаем модуль обучения ПОВЕРХ main.js -->
+<script type="module" src="./js/tutorial.js"></script>
 </body>
 </html>
