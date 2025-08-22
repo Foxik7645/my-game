@@ -471,7 +471,22 @@ function unrenderBuildingDoc(id){
   } else if (b?.type==='base' && b.owner !== uid) {
     const zone = otherBaseZones.get(id); zone?.remove(); otherBaseZones.delete(id);
   }
-}
+}    
+markers.set(id, marker);
+    buildingData.set(id, b);
+    if(b.owner===uid){
+      if(b.type==='drovosekdom' && !woodcuttersByHome.has(id)) woodcuttersByHome.set(id, new Set());
+      if(b.type==='minehouse'   && !minersByHome.has(id))      minersByHome.set(id, new Set());
+      if(b.type==='fermerdom'   && !farmersByHome.has(id))     farmersByHome.set(id, new Set());
+    }
+
+    // >>> hook для tutorial.js
+    try {
+      if (b.owner === uid) {
+        window.dispatchEvent(new CustomEvent('mg:building-added', { detail: b }));
+      }
+    } catch {}
+    // <<<
 
 /* ---------- Firestore listeners ---------- */
 let buildingsUnsub = null;
@@ -1364,4 +1379,25 @@ onAuthStateChanged(auth, async user => {
   }
 }, error => {
   showToast('Ошибка аутентификации: ' + error.message, [], 2500);
-});
+  
+  // >>> небольшой API для tutorial.js
+window.__game = {
+  get uid(){ return uid; },
+  openShop(){ const p=document.getElementById('shopPanel'); if(p) p.style.display='block'; },
+  closeShop(){ const p=document.getElementById('shopPanel'); if(p) p.style.display='none'; },
+  addResources(delta){
+    resources.money = (resources.money||0) + (delta.money||0);
+    resources.wood  = (resources.wood||0)  + (delta.wood||0);
+    resources.stone = (resources.stone||0) + (delta.stone||0);
+    resources.corn  = (resources.corn||0)  + (delta.corn||0);
+    resources.food  = (resources.food||0)  + (delta.food||0);
+    updateResourcePanel(); schedulePlayerSave();
+  },
+  toast(msg,ms=1800){ try{ showToast(msg, [], ms);}catch{}; },
+  highlight(selector, on=true){
+    document.querySelectorAll('.highlight-tut').forEach(e=>e.classList.remove('highlight-tut','pulse'));
+    if(on){
+      const el=document.querySelector(selector);
+      if(el){ el.classList.add('highlight-tut','pulse'); el.scrollIntoView?.({block:'center',behavior:'smooth'}); }
+    }
+  };
