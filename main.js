@@ -586,8 +586,6 @@ function getDomAnchors(type){
   });
   return anchors;
 };
-  return anchors;
-}
 function spawnTreesBatch(){
   if(!uid) return; // wait for auth to know owner
   const anchors = getDomAnchors('drovosekdom'); if(anchors.length===0) return;
