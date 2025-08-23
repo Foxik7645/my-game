@@ -3,14 +3,6 @@
 // ---------- Firebase ----------
 import { initializeApp } from "https://www.gstatic.com/firebasejs/11.0.1/firebase-app.js";
 import {
-  getAuth,
-  GoogleAuthProvider,
-  onAuthStateChanged,
-  signOut,
-  signInWithRedirect,
-  getRedirectResult,
-} from "https://www.gstatic.com/firebasejs/11.0.1/firebase-auth.js";
-import {
   getFirestore,
   collection,
   addDoc,
