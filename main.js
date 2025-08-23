@@ -1157,8 +1157,6 @@ const profileAvatarDiv = $id('profileAvatar');
 const profileSave      = $id('profileSave');
 const profileCancel    = $id('profileCancel');
 
-const provider = new GoogleAuthProvider();
-
 // Глобальные (в твоём коде они уже объявлены выше/ниже)
 
 const DEV = location.hostname === 'localhost' || location.hostname.endsWith('.github.io');
