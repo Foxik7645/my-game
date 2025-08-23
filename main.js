@@ -1,24 +1,24 @@
 // ============================ main.js (module) ============================
 
-// ---------- Firebase ----------
+// ============================ Firebase (TOP OF FILE) ============================
 import { initializeApp } from "https://www.gstatic.com/firebasejs/11.0.1/firebase-app.js";
 import {
   getFirestore,
-  collection,
-  addDoc,
-  onSnapshot,
-  doc,
-  setDoc,
-  getDoc,
-  updateDoc,
-  deleteDoc,
-  serverTimestamp,
-  getDocs,
-  query,
-  where,
+  collection, addDoc, onSnapshot, doc, setDoc, getDoc,
+  updateDoc, deleteDoc, serverTimestamp, getDocs, query, where,
 } from "https://www.gstatic.com/firebasejs/11.0.1/firebase-firestore.js";
+import {
+  getAuth,
+  GoogleAuthProvider,
+  signInWithRedirect,
+  getRedirectResult,
+  onAuthStateChanged,
+  signOut,
+  setPersistence,
+  browserLocalPersistence
+} from "https://www.gstatic.com/firebasejs/11.0.1/firebase-auth.js";
 
-// ---------- Firebase Config (замени на свой, если нужно) ----------
+// ---- Firebase config ----
 const firebaseConfig = {
   apiKey: "AIzaSyC-cKsUyDM2H1Hs3ouKjRjO2Vxg9QvC880",
   authDomain: "gamemap-84ae8.firebaseapp.com",
@@ -28,14 +28,24 @@ const firebaseConfig = {
   appId: "1:198147414309:web:33b340d6bf6dbd3d01a2cc",
   measurementId: "G-M2TKZCT4LT",
 };
-const app = initializeApp(firebaseConfig);
-const auth = getAuth(app);
-const db = getFirestore(app);
 
-// ============================ Глобальные ============================
-const $id = (id) => document.getElementById(id);
-const setOnClick = (el, fn) => { if (el) el.onclick = fn; };
-const exists = (id, el) => { if (!el) console.warn(`[UI] #${id} not found`); return el; };
+// ---- Init ----
+const app  = initializeApp(firebaseConfig);
+const db   = getFirestore(app);
+const auth = getAuth(app);
+
+// Сохраняем сессию между перезагрузками
+await setPersistence(auth, browserLocalPersistence).catch(() => {});
+
+// Подготовим провайдера Google (создавать нужно ОДИН раз!)
+const provider = new GoogleAuthProvider();
+
+// Если был редирект после выбора аккаунта — заберём результат (и не упадём, если его нет)
+try { await getRedirectResult(auth); } catch (e) {
+  if (e && e.code !== "auth/no-auth-event") {
+    console.warn("[auth] redirect error:", e);
+  }
+}
 
 // Глобальные состояния — держим выше всех функций, чтобы не было ReferenceError
 let uid = null;
