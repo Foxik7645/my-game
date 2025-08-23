@@ -66,6 +66,7 @@ let playerDocRef = null;
 let profileAvatar = "";
 let profileNickname = "";
 let avatarDraft = "";
+globalThis.soldiers ??= new Set();
 
 // Контейнер тостов — объявляем до showToast
 const toasts = $id("toasts");
@@ -1278,8 +1279,13 @@ onAuthStateChanged(auth, async (user) => {
 
     woodcuttersByHome.clear(); minersByHome.clear(); farmersByHome.clear();
     workerDocs.forEach(rec=>{ try{ map.removeLayer(rec.marker);}catch(e){} }); workerDocs.clear();
-    soldiers?.forEach?.(m=>{ try{ map.removeLayer(m);}catch(e){} }); soldiers?.clear?.();
-  }
+   {
+      const s = globalThis.soldiers;
+      if (s && s.forEach) {
+        try { s.forEach(m => { try { map.removeLayer?.(m); } catch {} }); } catch {}
+        try { s.clear?.(); } catch {}
+      }
+    }
 }, (error) => {
   console.error('[auth] onAuthStateChanged error:', error?.code, error?.message);
   showToast('Ошибка аутентификации: ' + error.message, [], 2500);
