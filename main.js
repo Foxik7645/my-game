@@ -1460,5 +1460,4 @@ window.__game = {
       if (el) {
         el.classList.add('highlight-tut', 'pulse');
         if (typeof el.scrollIntoView === 'function') {
-          el.scrollIntoView block: 'center', behavior: 'smooth'}
-    });
+          el.scrollIntoView({ block: 'center', behavior: 'smooth' });
