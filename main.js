@@ -36,9 +36,6 @@ const auth = getAuth(app);
 // Сохраняем сессию между перезагрузками
 try { await setPersistence(auth, browserLocalPersistence); } catch {}
 
-// Гугл-провайдер (создаём ровно один раз!)
-const provider = new GoogleAuthProvider();
-
 // Если был редирект после выбора аккаунта — подберём результат
 try {
   await getRedirectResult(auth);
