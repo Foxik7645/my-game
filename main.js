@@ -1133,7 +1133,6 @@ import {
 } from "https://www.gstatic.com/firebasejs/11.0.1/firebase-auth.js";
 
 // Утилиты (если у тебя уже есть свои exists/$id/setOnClick — можно использовать их)
-const $id = (s) => document.getElementById(s);
 const setOnClick = (el, fn) => { if (el) el.onclick = fn; };
 
 const loginBtn         = $id('loginBtn');
