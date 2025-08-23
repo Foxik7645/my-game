@@ -8,7 +8,6 @@ import {
   updateDoc, deleteDoc, serverTimestamp, getDocs, query, where,
 } from "https://www.gstatic.com/firebasejs/11.0.1/firebase-firestore.js";
 import {
-  getAuth,
   GoogleAuthProvider,
   signInWithRedirect,
   getRedirectResult,
