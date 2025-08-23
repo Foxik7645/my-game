@@ -35,17 +35,30 @@ const db   = getFirestore(app);
 const auth = getAuth(app);
 
 // Сохраняем сессию между перезагрузками
-await setPersistence(auth, browserLocalPersistence).catch(() => {});
+try { await setPersistence(auth, browserLocalPersistence); } catch {}
 
-// Подготовим провайдера Google (создавать нужно ОДИН раз!)
+// Гугл-провайдер (создаём ровно один раз!)
 const provider = new GoogleAuthProvider();
 
-// Если был редирект после выбора аккаунта — заберём результат (и не упадём, если его нет)
-try { await getRedirectResult(auth); } catch (e) {
+// Если был редирект после выбора аккаунта — подберём результат
+try {
+  await getRedirectResult(auth);
+} catch (e) {
   if (e && e.code !== "auth/no-auth-event") {
     console.warn("[auth] redirect error:", e);
   }
 }
+
+// ============================ Helpers (для UI/логики) ============================
+const $id = (s) => document.getElementById(s);
+const exists = (_name, el) => el || null;
+const setOnClick = (el, fn) => { if (el) el.onclick = fn; };
+const dlog = (...a) => {
+  // В проде можно отключить, оставлю условие на Github Pages/localhost
+  if (location.hostname === "localhost" || location.hostname.endsWith(".github.io")) {
+    console.log(...a);
+  }
+};
 
 // Глобальные состояния — держим выше всех функций, чтобы не было ReferenceError
 let uid = null;
