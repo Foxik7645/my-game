@@ -1132,16 +1132,6 @@ setInterval(spawnRocksBatch, ROCK_SPAWN_INTERVAL_MS);
 setInterval(spawnCornBatch, CORN_SPAWN_INTERVAL_MS);
 
 /* ---------- AUTH (Redirect) ---------- */
-import {
-  GoogleAuthProvider,
-  signInWithRedirect,
-  getRedirectResult,
-  onAuthStateChanged,
-  signOut,
-  setPersistence,
-  browserLocalPersistence
-} from "https://www.gstatic.com/firebasejs/11.0.1/firebase-auth.js";
-
 // Утилиты (если у тебя уже есть свои exists/$id/setOnClick — можно использовать их)
 
 const loginBtn         = $id('loginBtn');
