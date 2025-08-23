@@ -29,112 +29,121 @@ import {
   where
 } from "./firebaseConfig.js";
 
-/* ---------- Auth UI ---------- */
-const loginBtn         = exists('loginBtn', $id('loginBtn'));
-const logoutBtn        = exists('logoutBtn', $id('logoutBtn'));
-const userName         = exists('userName', $id('userName'));
-const profileBtn       = exists('profileBtn', $id('profileBtn'));
-const profileOverlay   = exists('profileOverlay', $id('profileOverlay'));
-const profileMenu      = exists('profileMenu', $id('profileMenu'));
-const avatarInput      = exists('avatarInput', $id('avatarInput'));
-const profileNameInput = exists('profileName', $id('profileName'));
-const profileIdSpan    = exists('profileId', $id('profileId'));
-const profileAvatarDiv = exists('profileAvatar', $id('profileAvatar'));
-const profileSave      = exists('profileSave', $id('profileSave'));
-const profileCancel    = exists('profileCancel', $id('profileCancel'));
+/* ======================= AUTH (Redirect, GitHub Pages friendly) ======================= */
+/* Требование: initializeApp(firebaseConfig) должен быть вызван выше этого блока */
 
 const provider = new GoogleAuthProvider();
+// всегда показывать выбор аккаунта
+provider.setCustomParameters({ prompt: 'select_account' });
 
-// Обрабатываем результат редиректа (если он был)
-// Если события не было — просто молча выходим
-getRedirectResult(auth).catch(e => {
-  if (e && e.code !== 'auth/no-auth-event') {
-    showToast('Ошибка входа: ' + (e?.message || e), [], 2500);
-  }
-});
+// обработка результата редиректа (если он был)
+getRedirectResult(auth)
+  .then(() => {
+    // onAuthStateChanged поймает user ниже
+  })
+  .catch(e => {
+    if (e && e.code !== 'auth/no-auth-event') {
+      console.warn('[auth redirect error]', e);
+      showToast('Ошибка входа: ' + (e?.message || e?.code || e), [], 3000);
+    }
+  });
 
-// Флаг, чтобы избежать двойных кликов по "Войти"
+// защита от двойных кликов
 let loginInFlight = false;
 
-// Вход: если уже авторизованы — сначала выходим,
-// затем запускаем signInWithRedirect, чтобы выбрать другой аккаунт.
-setOnClick(loginBtn, async () => {
+// кнопка "Войти" — редирект на Google
+setOnClick?.(loginBtn, async () => {
   if (loginInFlight) return;
   loginInFlight = true;
   try {
-    if (auth.currentUser) {
-      try { await signOut(auth); } catch {}
-    }
     await signInWithRedirect(auth, provider);
-    // дальше управление уйдёт на страницу Google, вернёмся по редиректу
+    // управление уйдёт на Google и вернётся по редиректу
   } catch (err) {
-    showToast('Ошибка входа: ' + (err?.message || err), [], 3000);
     loginInFlight = false;
+    showToast('Ошибка входа: ' + (err?.message || err), [], 3000);
   }
 });
 
-// Явный выход
-setOnClick(logoutBtn, async () => {
+// кнопка "Выйти"
+setOnClick?.(logoutBtn, async () => {
   try { await signOut(auth); } catch {}
   loginInFlight = false;
 });
 
-/* ------ Профиль ------ */
-function openProfile(){
-  if(!uid) return;
-  if (profileOverlay) profileOverlay.style.display = 'block';
-  if (profileMenu)    profileMenu.style.display    = 'block';
-  avatarDraft = '';
-  if (profileIdSpan)       profileIdSpan.textContent = uid;
-  if (profileNameInput)    profileNameInput.value    = profileNickname || '';
-  if (profileAvatarDiv)    profileAvatarDiv.style.backgroundImage = profileAvatar ? `url('${profileAvatar}')` : '';
-  if (avatarInput)         avatarInput.value = '';
-}
-function closeProfile(){
-  if (profileOverlay) profileOverlay.style.display = 'none';
-  if (profileMenu)    profileMenu.style.display    = 'none';
-  if (avatarInput)    avatarInput.value = '';
-}
+/* ---------- состояние авторизации ---------- */
+onAuthStateChanged(auth, async (user) => {
+  console.log('[auth] state:', !!user, user?.uid);
+  try {
+    if (user) {
+      // === вошли ===
+      uid = user.uid;
+      profileNickname = user.displayName || user.email || 'Player';
+      profileAvatar   = user.photoURL || '';
 
-setOnClick(profileBtn, openProfile);
-setOnClick(profileCancel, closeProfile);
-if (profileOverlay) profileOverlay.onclick = closeProfile;
+      if (userName)   userName.textContent = profileNickname;
+      if (profileBtn) { profileBtn.style.backgroundImage = profileAvatar ? `url('${profileAvatar}')` : ''; profileBtn.style.display = 'inline-block'; }
+      if (loginBtn)   { loginBtn.style.display = 'inline-block'; loginBtn.textContent = 'Сменить аккаунт'; }
+      if (logoutBtn)  logoutBtn.style.display = 'inline-block';
 
-if (avatarInput) {
-  avatarInput.onchange = e => {
-    const file = e.target.files?.[0];
-    if (file) {
-      const reader = new FileReader();
-      reader.onload = () => {
-        avatarDraft = reader.result;
-        if (profileAvatarDiv) profileAvatarDiv.style.backgroundImage = `url('${avatarDraft}')`;
-      };
-      reader.readAsDataURL(file);
+      playerDocRef = doc(db, 'players', uid);
+      await ensurePlayerDoc();
+      startRealtime();
+
+    } else {
+      // === вышли ===
+      uid = null;
+      playerDocRef = null;
+
+      if (userName) userName.textContent = '';
+      if (loginBtn) { loginBtn.style.display = 'inline-block'; loginBtn.textContent = 'Войти с Google'; }
+      if (logoutBtn) logoutBtn.style.display = 'none';
+      if (profileBtn){ profileBtn.style.display = 'none'; profileBtn.style.backgroundImage = ''; }
+      profileNickname = '';
+      profileAvatar   = '';
+
+      // отписки
+      try { buildingsUnsub?.(); } catch {}
+      try { playerUnsub?.();    } catch {}
+      try { workersUnsub?.();   } catch {}
+      buildingsUnsub = playerUnsub = workersUnsub = null;
+
+      // очистка карты/данных
+      try { markers.forEach(m => { try{ map.removeLayer(m); }catch{} }); } catch {}
+      markers.clear();
+      buildingData.clear();
+
+      if (baseZone) { try{ baseZone.remove(); }catch{} baseZone = null; }
+      baseMarker = null;
+      otherBaseZones.forEach(z => { try{ z.remove(); }catch{} });
+      otherBaseZones.clear();
+
+      woodcuttersByHome.clear();
+      minersByHome.clear();
+      farmersByHome.clear();
+      try { workerDocs.forEach(rec => { try{ map.removeLayer(rec.marker); }catch{} }); } catch {}
+      workerDocs.clear();
+
+      // локальные ресурсы на карте
+      try { trees.forEach(t => { try{ map.removeLayer(t.marker); }catch{} }); trees.clear(); } catch {}
+      try { rocks.forEach(r => { try{ map.removeLayer(r.marker); }catch{} }); rocks.clear(); } catch {}
+      try { corn.forEach(c => { try{ map.removeLayer(c.marker); }catch{} }); corn.clear(); } catch {}
+
+      // сброс чисел в шапке (чтобы не мигало старыми)
+      try {
+        resources.money = 0; resources.wood = 0; resources.stone = 0; resources.corn = 0; resources.food = 0;
+        updateResourcePanel();
+      } catch {}
     }
-  };
-}
-
-setOnClick(profileSave, async () => {
-  if(!uid || !playerDocRef) return;
-  const newName   = (profileNameInput?.value?.trim()) || 'Игрок';
-  const newAvatar = avatarDraft || profileAvatar;
-  try{
-    await updateDoc(playerDocRef, { nick: newName, avatar: newAvatar });
-    profileNickname = newName;
-    profileAvatar   = newAvatar;
-    if (userName)  userName.textContent = profileNickname;
-    if (profileBtn) profileBtn.style.backgroundImage = profileAvatar ? `url('${profileAvatar}')` : '';
-    closeProfile();
-  }catch(e){
-    showToast('Ошибка сохранения профиля: ' + e.message, [], 2500);
+  } catch (error) {
+    console.warn('[auth state error]', error);
+    showToast('Ошибка аутентификации: ' + (error?.message || error), [], 2500);
+  } finally {
+    loginInFlight = false;
   }
+}, (error) => {
+  console.warn('[auth listener error]', error);
+  showToast('Ошибка аутентификации: ' + (error?.message || error), [], 2500);
 });
-
-let uid = null;
-let playerDocRef = null;
-let profileAvatar = '';
-let profileNickname = '';
-let avatarDraft = '';
 
 /* ---------- State ---------- */
 const BASE_XP = 500;
@@ -1355,55 +1364,6 @@ function showToast(html, actions=[] , timeoutMs=0){
 }
 
 /* ---------- auth ---------- */
-onAuthStateChanged(auth, async user => {
-  if (user) {
-    uid = user.uid;
-    profileNickname = user.displayName || user.email || 'Player';
-    profileAvatar = user.photoURL || '';
-    if (userName) userName.textContent = profileNickname;
-    if (profileBtn) {
-      profileBtn.style.backgroundImage = profileAvatar ? `url('${profileAvatar}')` : '';
-      profileBtn.style.display = 'inline-block';
-    }
-    if (loginBtn) {
-      loginBtn.style.display = 'inline-block';
-      loginBtn.textContent = 'Сменить аккаунт';
-    }
-    if (logoutBtn) logoutBtn.style.display = 'inline-block';
-    playerDocRef = doc(db, 'players', uid);
-    await ensurePlayerDoc();
-    startRealtime();
-  } else {
-    uid = null;
-    if (userName) userName.textContent = '';
-    if (loginBtn) loginBtn.textContent = 'Войти с Google';
-    if (logoutBtn) logoutBtn.style.display = 'none';
-
-    // Очистка локальных ресурсов при выходе
-    try { trees.forEach(t => { map.removeLayer(t.marker); }); trees.clear(); } catch {}
-    try { rocks.forEach(r => { map.removeLayer(r.marker); }); rocks.clear(); } catch {}
-    try { corn.forEach(c => { map.removeLayer(c.marker); }); corn.clear(); } catch {}
-
-    if (profileBtn) { profileBtn.style.display = 'none'; profileBtn.style.backgroundImage = ''; }
-    profileNickname = ''; profileAvatar = '';
-    buildingsUnsub?.(); playerUnsub?.(); workersUnsub?.();
-    buildingsUnsub = playerUnsub = workersUnsub = null;
-
-    markers.forEach(m => { try { map.removeLayer(m); } catch (e) {} }); markers.clear();
-    buildingData.clear();
-    if (baseZone) { baseZone.remove(); baseZone = null; }
-    baseMarker = null;
-    otherBaseZones.forEach(zone => zone.remove());
-    otherBaseZones.clear();
-
-    woodcuttersByHome.clear(); minersByHome.clear(); farmersByHome.clear();
-    workerDocs.forEach(rec => { try { map.removeLayer(rec.marker); } catch (e) {} }); workerDocs.clear();
-    soldiers.forEach(m => { try { map.removeLayer(m); } catch (e) {} }); soldiers.clear();
-  }
-}, error => {
-  showToast('Ошибка аутентификации: ' + error.message, [], 2500);
-});
-
 /* ---------- небольшой API для tutorial.js ---------- */
 window.__game = {
   get uid() { return uid; },
