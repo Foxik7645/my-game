@@ -1355,109 +1355,80 @@ function showToast(html, actions=[] , timeoutMs=0){
 }
 
 /* ---------- auth ---------- */
-onAuthStateChanged(auth, async (user) => {
+onAuthStateChanged(auth, async user => {
   if (user) {
-    // === вошёл пользователь ===
     uid = user.uid;
     profileNickname = user.displayName || user.email || 'Player';
-    profileAvatar   = user.photoURL || '';
-
-    if (userName)   userName.textContent = profileNickname;
-    if (profileBtn) { profileBtn.style.backgroundImage = profileAvatar ? `url('${profileAvatar}')` : ''; profileBtn.style.display = 'inline-block'; }
-    if (loginBtn)   { loginBtn.style.display = 'inline-block'; loginBtn.textContent = 'Сменить аккаунт'; }
-    if (logoutBtn)  logoutBtn.style.display = 'inline-block';
-
+    profileAvatar = user.photoURL || '';
+    if (userName) userName.textContent = profileNickname;
+    if (profileBtn) {
+      profileBtn.style.backgroundImage = profileAvatar ? `url('${profileAvatar}')` : '';
+      profileBtn.style.display = 'inline-block';
+    }
+    if (loginBtn) {
+      loginBtn.style.display = 'inline-block';
+      loginBtn.textContent = 'Сменить аккаунт';
+    }
+    if (logoutBtn) logoutBtn.style.display = 'inline-block';
     playerDocRef = doc(db, 'players', uid);
     await ensurePlayerDoc();
     startRealtime();
-
   } else {
-    // === вышли из аккаунта ===
     uid = null;
-
-    // Шапка
     if (userName) userName.textContent = '';
-    if (loginBtn) { loginBtn.style.display = 'inline-block'; loginBtn.textContent = 'Войти с Google'; }
+    if (loginBtn) loginBtn.textContent = 'Войти с Google';
     if (logoutBtn) logoutBtn.style.display = 'none';
-    if (profileBtn){ profileBtn.style.display = 'none'; profileBtn.style.backgroundImage = ''; }
-    profileNickname = '';
-    profileAvatar   = '';
 
-    // Отписки
-    try { buildingsUnsub?.(); } catch {}
-    try { playerUnsub?.();    } catch {}
-    try { workersUnsub?.();   } catch {}
+    // Очистка локальных ресурсов при выходе
+    try { trees.forEach(t => { map.removeLayer(t.marker); }); trees.clear(); } catch {}
+    try { rocks.forEach(r => { map.removeLayer(r.marker); }); rocks.clear(); } catch {}
+    try { corn.forEach(c => { map.removeLayer(c.marker); }); corn.clear(); } catch {}
+
+    if (profileBtn) { profileBtn.style.display = 'none'; profileBtn.style.backgroundImage = ''; }
+    profileNickname = ''; profileAvatar = '';
+    buildingsUnsub?.(); playerUnsub?.(); workersUnsub?.();
     buildingsUnsub = playerUnsub = workersUnsub = null;
 
-    // Очистка ресурсов (локальные маркеры)
-    try { trees.forEach(t => { try{ map.removeLayer(t.marker); }catch{} }); trees.clear(); } catch {}
-    try { rocks.forEach(r => { try{ map.removeLayer(r.marker); }catch{} }); rocks.clear(); } catch {}
-    try { corn.forEach(c => { try{ map.removeLayer(c.marker); }catch{} }); corn.clear(); } catch {}
-
-    // Очистка карты/структур
-    markers.forEach(m => { try{ map.removeLayer(m); }catch{} }); markers.clear();
+    markers.forEach(m => { try { map.removeLayer(m); } catch (e) {} }); markers.clear();
     buildingData.clear();
-
-    if (baseZone) { try{ baseZone.remove(); }catch{} baseZone = null; }
+    if (baseZone) { baseZone.remove(); baseZone = null; }
     baseMarker = null;
-    otherBaseZones.forEach(zone => { try{ zone.remove(); }catch{} });
+    otherBaseZones.forEach(zone => zone.remove());
     otherBaseZones.clear();
 
-    woodcuttersByHome.clear();
-    minersByHome.clear();
-    farmersByHome.clear();
-    workerDocs.forEach(rec => { try{ map.removeLayer(rec.marker); }catch{} });
-    workerDocs.clear();
-
-    // Если используешь солдат — чистим тоже
-    try { soldiers.forEach(m => { try{ map.removeLayer(m); }catch{} }); soldiers.clear(); } catch {}
-
-    // (опционально) сброс видимых чисел ресурсов
-    try {
-      resources.money = 0; resources.wood = 0; resources.stone = 0; resources.corn = 0; resources.food = 0;
-      updateResourcePanel();
-    } catch {}
+    woodcuttersByHome.clear(); minersByHome.clear(); farmersByHome.clear();
+    workerDocs.forEach(rec => { try { map.removeLayer(rec.marker); } catch (e) {} }); workerDocs.clear();
+    soldiers.forEach(m => { try { map.removeLayer(m); } catch (e) {} }); soldiers.clear();
   }
-}, (error) => {
-  showToast('Ошибка аутентификации: ' + (error?.message || error), [], 2500);
+}, error => {
+  showToast('Ошибка аутентификации: ' + error.message, [], 2500);
 });
 
-/* ---------- небольшой API для tutorial.js (вне onAuthStateChanged!) ---------- */
+/* ---------- небольшой API для tutorial.js ---------- */
 window.__game = {
   get uid() { return uid; },
-
-  openShop() {
-    const p = document.getElementById('shopPanel');
-    if (p) p.style.display = 'block';
-  },
-
-  closeShop() {
-    const p = document.getElementById('shopPanel');
-    if (p) p.style.display = 'none';
-  },
-
+  openShop() { const p = document.getElementById('shopPanel'); if (p) p.style.display = 'block'; },
+  closeShop() { const p = document.getElementById('shopPanel'); if (p) p.style.display = 'none'; },
   addResources(delta) {
     resources.money = (resources.money || 0) + (delta.money || 0);
     resources.wood  = (resources.wood  || 0) + (delta.wood  || 0);
     resources.stone = (resources.stone || 0) + (delta.stone || 0);
     resources.corn  = (resources.corn  || 0) + (delta.corn  || 0);
     resources.food  = (resources.food  || 0) + (delta.food  || 0);
-    updateResourcePanel();
-    schedulePlayerSave();
+    updateResourcePanel(); schedulePlayerSave();
   },
-
-  toast(msg, ms = 1800) {
-    try { showToast(msg, [], ms); } catch {}
-  },
-
+  toast(msg, ms = 1800) { try { showToast(msg, [], ms); } catch {} },
   highlight(selector, on = true) {
-    document
-      .querySelectorAll('.highlight-tut')
+    document.querySelectorAll('.highlight-tut')
       .forEach(e => e.classList.remove('highlight-tut', 'pulse'));
-
     if (on && selector) {
       const el = document.querySelector(selector);
       if (el) {
         el.classList.add('highlight-tut', 'pulse');
         if (typeof el.scrollIntoView === 'function') {
           el.scrollIntoView({ block: 'center', behavior: 'smooth' });
+        }
+      }
+    }
+  }
+};
