@@ -1129,151 +1129,169 @@ setInterval(spawnTreesBatch, TREE_SPAWN_INTERVAL_MS);
 setInterval(spawnRocksBatch, ROCK_SPAWN_INTERVAL_MS);
 setInterval(spawnCornBatch, CORN_SPAWN_INTERVAL_MS);
 
-// ============================ AUTH (Redirect) ============================
-const loginBtn        = exists("loginBtn", $id("loginBtn"));
-const logoutBtn       = exists("logoutBtn", $id("logoutBtn"));
-const userName        = exists("userName", $id("userName"));
-const profileBtn      = exists("profileBtn", $id("profileBtn"));
-const profileOverlay  = exists("profileOverlay", $id("profileOverlay"));
-const profileMenu     = exists("profileMenu", $id("profileMenu"));
-const avatarInput     = exists("avatarInput", $id("avatarInput"));
-const profileNameInput= exists("profileName", $id("profileName"));
-const profileIdSpan   = exists("profileId", $id("profileId"));
-const profileAvatarDiv= exists("profileAvatar", $id("profileAvatar"));
-const profileSave     = exists("profileSave", $id("profileSave"));
-const profileCancel   = exists("profileCancel", $id("profileCancel"));
+/* ---------- AUTH (Redirect) ---------- */
+import {
+  GoogleAuthProvider,
+  signInWithRedirect,
+  getRedirectResult,
+  onAuthStateChanged,
+  signOut,
+  setPersistence,
+  browserLocalPersistence
+} from "https://www.gstatic.com/firebasejs/11.0.1/firebase-auth.js";
+
+// Утилиты (если у тебя уже есть свои exists/$id/setOnClick — можно использовать их)
+const $id = (s) => document.getElementById(s);
+const setOnClick = (el, fn) => { if (el) el.onclick = fn; };
+
+const loginBtn         = $id('loginBtn');
+const logoutBtn        = $id('logoutBtn');
+const userName         = $id('userName');
+const profileBtn       = $id('profileBtn');
+const profileOverlay   = $id('profileOverlay');
+const profileMenu      = $id('profileMenu');
+const avatarInput      = $id('avatarInput');
+const profileNameInput = $id('profileName');
+const profileIdSpan    = $id('profileId');
+const profileAvatarDiv = $id('profileAvatar');
+const profileSave      = $id('profileSave');
+const profileCancel    = $id('profileCancel');
 
 const provider = new GoogleAuthProvider();
-provider.setCustomParameters({ prompt: "select_account" });
 
-getRedirectResult(auth).catch((e) => {
-  if (e && e.code !== "auth/no-auth-event") {
-    console.warn("[auth redirect error]", e);
-    showToast("Ошибка входа: " + (e?.message || e?.code || e), [], 3000);
+// Глобальные (в твоём коде они уже объявлены выше/ниже)
+let uid = typeof uid !== 'undefined' ? uid : null;
+let playerDocRef = typeof playerDocRef !== 'undefined' ? playerDocRef : null;
+let profileAvatar = typeof profileAvatar !== 'undefined' ? profileAvatar : '';
+let profileNickname = typeof profileNickname !== 'undefined' ? profileNickname : '';
+let avatarDraft = typeof avatarDraft !== 'undefined' ? avatarDraft : '';
+
+const DEV = location.hostname === 'localhost' || location.hostname.endsWith('.github.io');
+const dlog = (...a) => { if (DEV) console.log(...a); };
+
+// Всегда ставим local persistence ДО любых попыток логина/парсинга редиректа
+await setPersistence(auth, browserLocalPersistence).catch(()=>{});
+
+// Разбираем результат редиректа, если он был
+try {
+  const rr = await getRedirectResult(auth);
+  if (rr?.user) dlog('[auth] redirect result:', rr.user.uid);
+} catch (e) {
+  // auth/no-auth-event — это нормально, когда редиректа не было
+  if (e?.code !== 'auth/no-auth-event') {
+    console.warn('[auth] getRedirectResult error:', e?.code, e?.message);
+  }
+}
+
+// Кнопка входа — только redirect (надёжно для GitHub Pages)
+setOnClick(loginBtn, async () => {
+  try {
+    await setPersistence(auth, browserLocalPersistence);
+    await signInWithRedirect(auth, provider);
+  } catch (e) {
+    showToast('Ошибка входа: ' + (e?.message || e), [], 3000);
   }
 });
 
-let loginInFlight = false;
-setOnClick(loginBtn, async () => {
-  if (loginInFlight) return;
-  loginInFlight = true;
-  try { await signInWithRedirect(auth, provider); }
-  catch (err) { loginInFlight = false; showToast("Ошибка входа: " + (err?.message || err), [], 3000); }
-});
-setOnClick(logoutBtn, async () => { try { await signOut(auth); } catch {} loginInFlight = false; });
+// Кнопка выхода
+setOnClick(logoutBtn, async () => { try { await signOut(auth); } catch {} });
 
-function openProfile() {
-  if (!uid) return;
-  if (profileOverlay) profileOverlay.style.display = "block";
-  if (profileMenu) profileMenu.style.display = "block";
-  avatarDraft = "";
+// Профиль (если у тебя есть UI профиля)
+function openProfile(){
+  if(!uid) return;
+  if (profileOverlay) profileOverlay.style.display='block';
+  if (profileMenu) profileMenu.style.display='block';
+  avatarDraft='';
   if (profileIdSpan) profileIdSpan.textContent = uid;
-  if (profileNameInput) profileNameInput.value = profileNickname || "";
-  if (profileAvatarDiv) profileAvatarDiv.style.backgroundImage = profileAvatar ? `url('${profileAvatar}')` : "";
-  if (avatarInput) avatarInput.value = "";
+  if (profileNameInput) profileNameInput.value = profileNickname || '';
+  if (profileAvatarDiv) profileAvatarDiv.style.backgroundImage = profileAvatar ? `url('${profileAvatar}')` : '';
+  if (avatarInput) avatarInput.value='';
 }
-function closeProfile() {
-  if (profileOverlay) profileOverlay.style.display = "none";
-  if (profileMenu) profileMenu.style.display = "none";
-  if (avatarInput) avatarInput.value = "";
+function closeProfile(){
+  if (profileOverlay) profileOverlay.style.display='none';
+  if (profileMenu) profileMenu.style.display='none';
+  if (avatarInput) avatarInput.value='';
 }
 setOnClick(profileBtn, openProfile);
 setOnClick(profileCancel, closeProfile);
 if (profileOverlay) profileOverlay.onclick = closeProfile;
-if (avatarInput) avatarInput.onchange = (e) => {
-  const file = e.target.files?.[0];
-  if (file) {
-    const reader = new FileReader();
-    reader.onload = () => { avatarDraft = reader.result; if (profileAvatarDiv) profileAvatarDiv.style.backgroundImage = `url('${avatarDraft}')`; };
-    reader.readAsDataURL(file);
-  }
-};
+if (avatarInput) {
+  avatarInput.onchange = e => {
+    const file = e.target.files?.[0];
+    if(file){
+      const reader = new FileReader();
+      reader.onload = () => {
+        avatarDraft = reader.result;
+        if (profileAvatarDiv) profileAvatarDiv.style.backgroundImage = `url('${avatarDraft}')`;
+      };
+      reader.readAsDataURL(file);
+    }
+  };
+}
 setOnClick(profileSave, async () => {
-  if (!uid || !playerDocRef) return;
-  const newName = (profileNameInput?.value?.trim()) || "Игрок";
+  if(!uid || !playerDocRef) return;
+  const newName = (profileNameInput?.value?.trim()) || 'Игрок';
   const newAvatar = avatarDraft || profileAvatar;
-  try {
+  try{
     await updateDoc(playerDocRef, { nick: newName, avatar: newAvatar });
     profileNickname = newName; profileAvatar = newAvatar;
     if (userName) userName.textContent = profileNickname;
-    if (profileBtn) profileBtn.style.backgroundImage = profileAvatar ? `url('${profileAvatar}')` : "";
+    if (profileBtn) profileBtn.style.backgroundImage = profileAvatar ? `url('${profileAvatar}')` : '';
     closeProfile();
-  } catch (e) {
-    showToast("Ошибка сохранения профиля: " + e.message, [], 2500);
+  }catch(e){
+    showToast('Ошибка сохранения профиля: ' + e.message, [], 2500);
   }
 });
 
+// ЕДИНСТВЕННЫЙ слушатель состояния — без дублей
 onAuthStateChanged(auth, async (user) => {
- const dev = location.hostname === 'localhost';
-if (dev) console.log('[auth] state:', !!user, user?.uid);
-  try {
-    if (user) {
-      uid = user.uid;
-      profileNickname = user.displayName || user.email || "Player";
-      profileAvatar = user.photoURL || "";
+  dlog('[auth] state:', !!user, user?.uid);
 
-      if (userName) userName.textContent = profileNickname;
-      if (profileBtn) { profileBtn.style.backgroundImage = profileAvatar ? `url('${profileAvatar}')` : ""; profileBtn.style.display = "inline-block"; }
-      if (loginBtn) { loginBtn.style.display = "inline-block"; loginBtn.textContent = "Сменить аккаунт"; }
-      if (logoutBtn) logoutBtn.style.display = "inline-block";
+  if (user) {
+    // вошли
+    uid = user.uid;
+    profileNickname = user.displayName || user.email || 'Player';
+    profileAvatar = user.photoURL || '';
 
-      playerDocRef = doc(db, "players", uid);
-      const snap = await getDoc(playerDocRef);
-      if (!snap.exists()) {
-        await setDoc(playerDocRef, {
-          money: 100, wood: 10, stone: 0, corn: 0, food: 30,
-          level: 1, xp: 0, nick: profileNickname, avatar: profileAvatar,
-          createdAt: serverTimestamp()
-        });
-      }
+    if (userName) userName.textContent = profileNickname;
+    if (profileBtn) { profileBtn.style.backgroundImage = profileAvatar ? `url('${profileAvatar}')` : ''; profileBtn.style.display='inline-block'; }
+    if (loginBtn){ loginBtn.style.display='inline-block'; loginBtn.textContent = 'Сменить аккаунт'; }
+    if (logoutBtn) logoutBtn.style.display='inline-block';
 
-      startRealtime();
-    } else {
-      uid = null; playerDocRef = null;
+    playerDocRef = doc(db, 'players', uid);
+    await ensurePlayerDoc();
+    startRealtime(); // твоя функция подписок/таймеров
+  } else {
+    // вышли / нет сессии
+    uid = null;
+    if (userName) userName.textContent = '';
+    if (loginBtn) loginBtn.textContent = 'Войти с Google';
+    if (logoutBtn) logoutBtn.style.display='none';
+    if (profileBtn){ profileBtn.style.display='none'; profileBtn.style.backgroundImage=''; }
+    profileNickname=''; profileAvatar='';
 
-      if (userName) userName.textContent = "";
-      if (loginBtn) { loginBtn.style.display = "inline-block"; loginBtn.textContent = "Войти с Google"; }
-      if (logoutBtn) logoutBtn.style.display = "none";
-      if (profileBtn) { profileBtn.style.display = "none"; profileBtn.style.backgroundImage = ""; }
-      profileNickname = ""; profileAvatar = "";
+    // Чистка локального состояния (оставил как у тебя)
+    try { trees.forEach(t=>{ map.removeLayer(t.marker); }); trees.clear(); } catch {}
+    try { rocks.forEach(r=>{ map.removeLayer(r.marker); }); rocks.clear(); } catch {}
+    try { corn.forEach(c=>{ map.removeLayer(c.marker); }); corn.clear(); } catch {}
 
-      try { buildingsUnsub?.(); } catch {}
-      try { playerUnsub?.(); } catch {}
-      try { workersUnsub?.(); } catch {}
-      buildingsUnsub = playerUnsub = workersUnsub = null;
+    buildingsUnsub?.(); playerUnsub?.(); workersUnsub?.();
+    buildingsUnsub = playerUnsub = workersUnsub = null;
 
-      try { markers.forEach((m) => { try { map.removeLayer(m); } catch {} }); } catch {}
-      markers.clear(); buildingData.clear();
+    markers.forEach(m=>{ try{ map.removeLayer(m);}catch(e){} }); markers.clear();
+    buildingData.clear();
+    if(baseZone) { baseZone.remove(); baseZone = null; }
+    baseMarker = null;
+    otherBaseZones.forEach(zone => zone.remove());
+    otherBaseZones.clear();
 
-      if (baseZone) { try { baseZone.remove(); } catch {} baseZone = null; }
-      baseMarker = null;
-      otherBaseZones.forEach((z) => { try { z.remove(); } catch {} });
-      otherBaseZones.clear();
-
-      woodcuttersByHome.clear();
-      minersByHome.clear();
-      farmersByHome.clear();
-      try { workerDocs.forEach((rec) => { try { map.removeLayer(rec.marker); } catch {} }); } catch {}
-      workerDocs.clear();
-
-      try { trees.forEach((t) => { try { map.removeLayer(t.marker); } catch {} }); trees.clear(); } catch {}
-      try { rocks.forEach((r) => { try { map.removeLayer(r.marker); } catch {} }); rocks.clear(); } catch {}
-      try { corn.forEach((c) => { try { map.removeLayer(c.marker); } catch {} }); corn.clear(); } catch {}
-
-      try {
-        resources.money = 0; resources.wood = 0; resources.stone = 0; resources.corn = 0; resources.food = 0;
-        updateResourcePanel();
-      } catch {}
-    }
-  } catch (error) {
-    console.warn("[auth state error]", error);
-    showToast("Ошибка аутентификации: " + (error?.message || error), [], 2500);
-  } finally {
-    loginInFlight = false;
+    woodcuttersByHome.clear(); minersByHome.clear(); farmersByHome.clear();
+    workerDocs.forEach(rec=>{ try{ map.removeLayer(rec.marker);}catch(e){} }); workerDocs.clear();
+    soldiers?.forEach?.(m=>{ try{ map.removeLayer(m);}catch(e){} }); soldiers?.clear?.();
   }
 }, (error) => {
-  console.warn("[auth listener error]", error);
-  showToast("Ошибка аутентификации: " + (error?.message || error), [], 2500);
+  console.error('[auth] onAuthStateChanged error:', error?.code, error?.message);
+  showToast('Ошибка аутентификации: ' + error.message, [], 2500);
 });
 
 // ============================ API для tutorial.js ============================
