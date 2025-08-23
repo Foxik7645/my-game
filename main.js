@@ -1204,7 +1204,8 @@ setOnClick(profileSave, async () => {
 });
 
 onAuthStateChanged(auth, async (user) => {
-  console.log("[auth] state:", !!user, user?.uid);
+ const dev = location.hostname === 'localhost';
+if (dev) console.log('[auth] state:', !!user, user?.uid);
   try {
     if (user) {
       uid = user.uid;
