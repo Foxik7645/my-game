@@ -1160,11 +1160,6 @@ const profileAvatarDiv = $id('profileAvatar');
 const profileSave      = $id('profileSave');
 const profileCancel    = $id('profileCancel');
 
-// Глобальные (в твоём коде они уже объявлены выше/ниже)
-
-const DEV = location.hostname === 'localhost' || location.hostname.endsWith('.github.io');
-const dlog = (...a) => { if (DEV) console.log(...a); };
-
 // Всегда ставим local persistence ДО любых попыток логина/парсинга редиректа
 await setPersistence(auth, browserLocalPersistence).catch(()=>{});
 
