@@ -1235,60 +1235,72 @@ setOnClick(profileSave, async () => {
   }
 });
 
-// ЕДИНСТВЕННЫЙ слушатель состояния — без дублей
 onAuthStateChanged(auth, async (user) => {
-  dlog('[auth] state:', !!user, user?.uid);
-
   if (user) {
-    // вошли
     uid = user.uid;
     profileNickname = user.displayName || user.email || 'Player';
-    profileAvatar = user.photoURL || '';
+    profileAvatar   = user.photoURL || '';
 
-    if (userName) userName.textContent = profileNickname;
-    if (profileBtn) { profileBtn.style.backgroundImage = profileAvatar ? `url('${profileAvatar}')` : ''; profileBtn.style.display='inline-block'; }
-    if (loginBtn){ loginBtn.style.display='inline-block'; loginBtn.textContent = 'Сменить аккаунт'; }
-    if (logoutBtn) logoutBtn.style.display='inline-block';
+    if (userName)  userName.textContent = profileNickname;
+    if (loginBtn)  loginBtn.textContent = 'Сменить аккаунт';
+    if (logoutBtn) logoutBtn.style.display = 'inline-block';
 
     playerDocRef = doc(db, 'players', uid);
     await ensurePlayerDoc();
-    startRealtime(); // твоя функция подписок/таймеров
+    startRealtime();
+
   } else {
-    // вышли / нет сессии
+    // ---------- LOGOUT ----------
     uid = null;
-    if (userName) userName.textContent = '';
-    if (loginBtn) loginBtn.textContent = 'Войти с Google';
-    if (logoutBtn) logoutBtn.style.display='none';
-    if (profileBtn){ profileBtn.style.display='none'; profileBtn.style.backgroundImage=''; }
-    profileNickname=''; profileAvatar='';
 
-    // Чистка локального состояния (оставил как у тебя)
-    try { trees.forEach(t=>{ map.removeLayer(t.marker); }); trees.clear(); } catch {}
-    try { rocks.forEach(r=>{ map.removeLayer(r.marker); }); rocks.clear(); } catch {}
-    try { corn.forEach(c=>{ map.removeLayer(c.marker); }); corn.clear(); } catch {}
+    if (userName)  userName.textContent = '';
+    if (loginBtn)  loginBtn.textContent = 'Войти с Google';
+    if (logoutBtn) logoutBtn.style.display = 'none';
 
-    buildingsUnsub?.(); playerUnsub?.(); workersUnsub?.();
+    // Чистка локального состояния
+    try { trees.forEach(t => { map.removeLayer(t.marker); }); } catch {}
+    try { rocks.forEach(r => { map.removeLayer(r.marker); }); } catch {}
+    try { corn.forEach(c => { map.removeLayer(c.marker); }); } catch {}
+    try { trees.clear(); rocks.clear(); corn.clear(); } catch {}
+
+    // Отписки
+    try { buildingsUnsub?.(); } catch {}
+    try { playerUnsub?.(); }    catch {}
+    try { workersUnsub?.(); }   catch {}
     buildingsUnsub = playerUnsub = workersUnsub = null;
 
-    markers.forEach(m=>{ try{ map.removeLayer(m);}catch(e){} }); markers.clear();
-    buildingData.clear();
-    if(baseZone) { baseZone.remove(); baseZone = null; }
-    baseMarker = null;
-    otherBaseZones.forEach(zone => zone.remove());
-    otherBaseZones.clear();
+    // Маркеры/данные
+    try { markers.forEach(m => { try { map.removeLayer(m); } catch {} }); } catch {}
+    try { markers.clear?.(); } catch {}
+    try { buildingData.clear?.(); } catch {}
 
-    woodcuttersByHome.clear(); minersByHome.clear(); farmersByHome.clear();
-    workerDocs.forEach(rec=>{ try{ map.removeLayer(rec.marker);}catch(e){} }); workerDocs.clear();
-   {
+    // База и зоны
+    try { if (baseZone) { baseZone.remove(); } } catch {}
+    baseZone = null;
+    baseMarker = null;
+    try { otherBaseZones.forEach(zone => { try { zone.remove(); } catch {} }); } catch {}
+    try { otherBaseZones.clear?.(); } catch {}
+
+    // Рабочие
+    try { woodcuttersByHome.clear?.(); } catch {}
+    try { minersByHome.clear?.(); }     catch {}
+    try { farmersByHome.clear?.(); }    catch {}
+    try { workerDocs.forEach(rec => { try { map.removeLayer(rec.marker); } catch {} }); } catch {}
+    try { workerDocs.clear?.(); } catch {}
+
+    // Солдаты — безопасная очистка без ReferenceError
+    {
       const s = globalThis.soldiers;
       if (s && s.forEach) {
         try { s.forEach(m => { try { map.removeLayer?.(m); } catch {} }); } catch {}
         try { s.clear?.(); } catch {}
       }
     }
+    // ---------- /LOGOUT ----------
+  }
 }, (error) => {
   console.error('[auth] onAuthStateChanged error:', error?.code, error?.message);
-  showToast('Ошибка аутентификации: ' + error.message, [], 2500);
+  showToast('Ошибка аутентификации: ' + (error?.message || error), [], 2500);
 });
 
 // ============================ API для tutorial.js ============================
