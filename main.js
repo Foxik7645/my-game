@@ -30,77 +30,100 @@ import {
 } from "./firebaseConfig.js";
 
 /* ---------- Auth UI ---------- */
-const loginBtn        = exists('loginBtn', $id('loginBtn'));
-const logoutBtn       = exists('logoutBtn', $id('logoutBtn'));
-const userName        = exists('userName', $id('userName'));
-const profileBtn      = exists('profileBtn', $id('profileBtn'));
-const profileOverlay  = exists('profileOverlay', $id('profileOverlay'));
-const profileMenu     = exists('profileMenu', $id('profileMenu'));
-const avatarInput     = exists('avatarInput', $id('avatarInput'));
-const profileNameInput= exists('profileName', $id('profileName'));
-const profileIdSpan   = exists('profileId', $id('profileId'));
-const profileAvatarDiv= exists('profileAvatar', $id('profileAvatar'));
-const profileSave     = exists('profileSave', $id('profileSave'));
-const profileCancel   = exists('profileCancel', $id('profileCancel'));
+const loginBtn         = exists('loginBtn', $id('loginBtn'));
+const logoutBtn        = exists('logoutBtn', $id('logoutBtn'));
+const userName         = exists('userName', $id('userName'));
+const profileBtn       = exists('profileBtn', $id('profileBtn'));
+const profileOverlay   = exists('profileOverlay', $id('profileOverlay'));
+const profileMenu      = exists('profileMenu', $id('profileMenu'));
+const avatarInput      = exists('avatarInput', $id('avatarInput'));
+const profileNameInput = exists('profileName', $id('profileName'));
+const profileIdSpan    = exists('profileId', $id('profileId'));
+const profileAvatarDiv = exists('profileAvatar', $id('profileAvatar'));
+const profileSave      = exists('profileSave', $id('profileSave'));
+const profileCancel    = exists('profileCancel', $id('profileCancel'));
 
 const provider = new GoogleAuthProvider();
 
-// Обработка результатов редиректа (если он был)
+// Обрабатываем результат редиректа (если он был)
+// Если события не было — просто молча выходим
 getRedirectResult(auth).catch(e => {
   if (e && e.code !== 'auth/no-auth-event') {
     showToast('Ошибка входа: ' + (e?.message || e), [], 2500);
   }
 });
 
-// Вход **только через редирект** — без попапа (COOP-safe)
+// Флаг, чтобы избежать двойных кликов по "Войти"
+let loginInFlight = false;
+
+// Вход: если уже авторизованы — сначала выходим,
+// затем запускаем signInWithRedirect, чтобы выбрать другой аккаунт.
 setOnClick(loginBtn, async () => {
+  if (loginInFlight) return;
+  loginInFlight = true;
   try {
+    if (auth.currentUser) {
+      try { await signOut(auth); } catch {}
+    }
     await signInWithRedirect(auth, provider);
+    // дальше управление уйдёт на страницу Google, вернёмся по редиректу
   } catch (err) {
     showToast('Ошибка входа: ' + (err?.message || err), [], 3000);
+    loginInFlight = false;
   }
 });
 
-setOnClick(logoutBtn, async () => { try{ await signOut(auth); }catch(e){} });
+// Явный выход
+setOnClick(logoutBtn, async () => {
+  try { await signOut(auth); } catch {}
+  loginInFlight = false;
+});
 
+/* ------ Профиль ------ */
 function openProfile(){
   if(!uid) return;
-  if (profileOverlay) profileOverlay.style.display='block';
-  if (profileMenu) profileMenu.style.display='block';
-  avatarDraft='';
-  if (profileIdSpan) profileIdSpan.textContent = uid;
-  if (profileNameInput) profileNameInput.value = profileNickname || '';
-  if (profileAvatarDiv) profileAvatarDiv.style.backgroundImage = profileAvatar?`url('${profileAvatar}')`:'';
-  if (avatarInput) avatarInput.value='';
+  if (profileOverlay) profileOverlay.style.display = 'block';
+  if (profileMenu)    profileMenu.style.display    = 'block';
+  avatarDraft = '';
+  if (profileIdSpan)       profileIdSpan.textContent = uid;
+  if (profileNameInput)    profileNameInput.value    = profileNickname || '';
+  if (profileAvatarDiv)    profileAvatarDiv.style.backgroundImage = profileAvatar ? `url('${profileAvatar}')` : '';
+  if (avatarInput)         avatarInput.value = '';
 }
 function closeProfile(){
-  if (profileOverlay) profileOverlay.style.display='none';
-  if (profileMenu) profileMenu.style.display='none';
-  if (avatarInput) avatarInput.value='';
+  if (profileOverlay) profileOverlay.style.display = 'none';
+  if (profileMenu)    profileMenu.style.display    = 'none';
+  if (avatarInput)    avatarInput.value = '';
 }
+
 setOnClick(profileBtn, openProfile);
 setOnClick(profileCancel, closeProfile);
 if (profileOverlay) profileOverlay.onclick = closeProfile;
-if (avatarInput) avatarInput.onchange = e => {
-  const file = e.target.files?.[0];
-  if(file){
-    const reader = new FileReader();
-    reader.onload = () => {
-      avatarDraft = reader.result;
-      if (profileAvatarDiv) profileAvatarDiv.style.backgroundImage = `url('${avatarDraft}')`;
-    };
-    reader.readAsDataURL(file);
-  }
-};
+
+if (avatarInput) {
+  avatarInput.onchange = e => {
+    const file = e.target.files?.[0];
+    if (file) {
+      const reader = new FileReader();
+      reader.onload = () => {
+        avatarDraft = reader.result;
+        if (profileAvatarDiv) profileAvatarDiv.style.backgroundImage = `url('${avatarDraft}')`;
+      };
+      reader.readAsDataURL(file);
+    }
+  };
+}
+
 setOnClick(profileSave, async () => {
   if(!uid || !playerDocRef) return;
-  const newName = (profileNameInput?.value?.trim()) || 'Игрок';
+  const newName   = (profileNameInput?.value?.trim()) || 'Игрок';
   const newAvatar = avatarDraft || profileAvatar;
   try{
     await updateDoc(playerDocRef, { nick: newName, avatar: newAvatar });
-    profileNickname = newName; profileAvatar = newAvatar;
-    if (userName) userName.textContent = profileNickname;
-    if (profileBtn) profileBtn.style.backgroundImage = profileAvatar?`url('${profileAvatar}')`:'';
+    profileNickname = newName;
+    profileAvatar   = newAvatar;
+    if (userName)  userName.textContent = profileNickname;
+    if (profileBtn) profileBtn.style.backgroundImage = profileAvatar ? `url('${profileAvatar}')` : '';
     closeProfile();
   }catch(e){
     showToast('Ошибка сохранения профиля: ' + e.message, [], 2500);
@@ -1332,69 +1355,110 @@ function showToast(html, actions=[] , timeoutMs=0){
 }
 
 /* ---------- auth ---------- */
-onAuthStateChanged(auth, async user => {
-  if(user){
+onAuthStateChanged(auth, async (user) => {
+  if (user) {
+    // === вошёл пользователь ===
     uid = user.uid;
     profileNickname = user.displayName || user.email || 'Player';
-    profileAvatar = user.photoURL || '';
-    if (userName) userName.textContent = profileNickname;
-    if (profileBtn) { profileBtn.style.backgroundImage = profileAvatar?`url('${profileAvatar}')`:''; profileBtn.style.display = 'inline-block'; }
-    if (loginBtn){ loginBtn.style.display='inline-block'; loginBtn.textContent = 'Сменить аккаунт'; }
-    if (logoutBtn) logoutBtn.style.display='inline-block';
+    profileAvatar   = user.photoURL || '';
+
+    if (userName)   userName.textContent = profileNickname;
+    if (profileBtn) { profileBtn.style.backgroundImage = profileAvatar ? `url('${profileAvatar}')` : ''; profileBtn.style.display = 'inline-block'; }
+    if (loginBtn)   { loginBtn.style.display = 'inline-block'; loginBtn.textContent = 'Сменить аккаунт'; }
+    if (logoutBtn)  logoutBtn.style.display = 'inline-block';
+
     playerDocRef = doc(db, 'players', uid);
     await ensurePlayerDoc();
     startRealtime();
+
   } else {
+    // === вышли из аккаунта ===
     uid = null;
+
+    // Шапка
     if (userName) userName.textContent = '';
-    if (loginBtn) loginBtn.textContent = 'Войти с Google';
-    if (logoutBtn) logoutBtn.style.display='none';
+    if (loginBtn) { loginBtn.style.display = 'inline-block'; loginBtn.textContent = 'Войти с Google'; }
+    if (logoutBtn) logoutBtn.style.display = 'none';
+    if (profileBtn){ profileBtn.style.display = 'none'; profileBtn.style.backgroundImage = ''; }
+    profileNickname = '';
+    profileAvatar   = '';
 
-    // Clear local resource markers on logout
-    try { trees.forEach(t=>{ map.removeLayer(t.marker); }); trees.clear(); } catch {}
-    try { rocks.forEach(r=>{ map.removeLayer(r.marker); }); rocks.clear(); } catch {}
-    try { corn.forEach(c=>{ map.removeLayer(c.marker); }); corn.clear(); } catch {}
-
-    if (profileBtn){ profileBtn.style.display='none'; profileBtn.style.backgroundImage=''; }
-    profileNickname=''; profileAvatar='';
-    buildingsUnsub?.(); playerUnsub?.(); workersUnsub?.();
+    // Отписки
+    try { buildingsUnsub?.(); } catch {}
+    try { playerUnsub?.();    } catch {}
+    try { workersUnsub?.();   } catch {}
     buildingsUnsub = playerUnsub = workersUnsub = null;
 
-    markers.forEach(m=>{ try{ map.removeLayer(m);}catch(e){} }); markers.clear();
+    // Очистка ресурсов (локальные маркеры)
+    try { trees.forEach(t => { try{ map.removeLayer(t.marker); }catch{} }); trees.clear(); } catch {}
+    try { rocks.forEach(r => { try{ map.removeLayer(r.marker); }catch{} }); rocks.clear(); } catch {}
+    try { corn.forEach(c => { try{ map.removeLayer(c.marker); }catch{} }); corn.clear(); } catch {}
+
+    // Очистка карты/структур
+    markers.forEach(m => { try{ map.removeLayer(m); }catch{} }); markers.clear();
     buildingData.clear();
-    if(baseZone) { baseZone.remove(); baseZone = null; }
+
+    if (baseZone) { try{ baseZone.remove(); }catch{} baseZone = null; }
     baseMarker = null;
-    otherBaseZones.forEach(zone => zone.remove());
+    otherBaseZones.forEach(zone => { try{ zone.remove(); }catch{} });
     otherBaseZones.clear();
 
-    woodcuttersByHome.clear(); minersByHome.clear(); farmersByHome.clear();
-    workerDocs.forEach(rec=>{ try{ map.removeLayer(rec.marker);}catch(e){} }); workerDocs.clear();
-    soldiers.forEach(m=>{ try{ map.removeLayer(m);}catch(e){} }); soldiers.clear();
+    woodcuttersByHome.clear();
+    minersByHome.clear();
+    farmersByHome.clear();
+    workerDocs.forEach(rec => { try{ map.removeLayer(rec.marker); }catch{} });
+    workerDocs.clear();
+
+    // Если используешь солдат — чистим тоже
+    try { soldiers.forEach(m => { try{ map.removeLayer(m); }catch{} }); soldiers.clear(); } catch {}
+
+    // (опционально) сброс видимых чисел ресурсов
+    try {
+      resources.money = 0; resources.wood = 0; resources.stone = 0; resources.corn = 0; resources.food = 0;
+      updateResourcePanel();
+    } catch {}
   }
-}, error => {
-  showToast('Ошибка аутентификации: ' + error.message, [], 2500);
-  
-  // >>> небольшой API для tutorial.js
-window.__game = {
-  get uid(){ return uid; },
-  openShop(){ const p=document.getElementById('shopPanel'); if(p) p.style.display='block'; },
-  closeShop(){ const p=document.getElementById('shopPanel'); if(p) p.style.display='none'; },
-  addResources(delta){
-    resources.money = (resources.money||0) + (delta.money||0);
-    resources.wood  = (resources.wood||0)  + (delta.wood||0);
-    resources.stone = (resources.stone||0) + (delta.stone||0);
-    resources.corn  = (resources.corn||0)  + (delta.corn||0);
-    resources.food  = (resources.food||0)  + (delta.food||0);
-    updateResourcePanel(); schedulePlayerSave();
-  },
-  toast(msg,ms=1800){ try{ showToast(msg, [], ms);}catch{}; },
-  highlight(selector, on=true){
-    document.querySelectorAll('.highlight-tut').forEach(e=>e.classList.remove('highlight-tut','pulse'));
-    if(on){
-      const el=document.querySelector(selector);
-      if(el){ el.classList.add('highlight-tut','pulse'); el.scrollIntoView?.({block:'center',behavior:'smooth'}); }
-      }
-    }
-  }
+}, (error) => {
+  showToast('Ошибка аутентификации: ' + (error?.message || error), [], 2500);
 });
-// <<<
+
+/* ---------- небольшой API для tutorial.js (вне onAuthStateChanged!) ---------- */
+window.__game = {
+  get uid() { return uid; },
+
+  openShop() {
+    const p = document.getElementById('shopPanel');
+    if (p) p.style.display = 'block';
+  },
+
+  closeShop() {
+    const p = document.getElementById('shopPanel');
+    if (p) p.style.display = 'none';
+  },
+
+  addResources(delta) {
+    resources.money = (resources.money || 0) + (delta.money || 0);
+    resources.wood  = (resources.wood  || 0) + (delta.wood  || 0);
+    resources.stone = (resources.stone || 0) + (delta.stone || 0);
+    resources.corn  = (resources.corn  || 0) + (delta.corn  || 0);
+    resources.food  = (resources.food  || 0) + (delta.food  || 0);
+    updateResourcePanel();
+    schedulePlayerSave();
+  },
+
+  toast(msg, ms = 1800) {
+    try { showToast(msg, [], ms); } catch {}
+  },
+
+  highlight(selector, on = true) {
+    document
+      .querySelectorAll('.highlight-tut')
+      .forEach(e => e.classList.remove('highlight-tut', 'pulse'));
+
+    if (on && selector) {
+      const el = document.querySelector(selector);
+      if (el) {
+        el.classList.add('highlight-tut', 'pulse');
+        if (typeof el.scrollIntoView === 'function') {
+          el.scrollIntoView({ block: 'center', behavior: 'smooth' }
+
