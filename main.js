@@ -1150,11 +1150,6 @@ const profileCancel    = $id('profileCancel');
 const provider = new GoogleAuthProvider();
 
 // Глобальные (в твоём коде они уже объявлены выше/ниже)
-let uid = typeof uid !== 'undefined' ? uid : null;
-let playerDocRef = typeof playerDocRef !== 'undefined' ? playerDocRef : null;
-let profileAvatar = typeof profileAvatar !== 'undefined' ? profileAvatar : '';
-let profileNickname = typeof profileNickname !== 'undefined' ? profileNickname : '';
-let avatarDraft = typeof avatarDraft !== 'undefined' ? avatarDraft : '';
 
 const DEV = location.hostname === 'localhost' || location.hostname.endsWith('.github.io');
 const dlog = (...a) => { if (DEV) console.log(...a); };
@@ -1315,4 +1310,3 @@ window.__game = {
 // ============================================================================
 // Конец main.js
 // ============================================================================
-
