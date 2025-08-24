@@ -457,6 +457,10 @@ addXP(0);
 
 /* ---------- Map ---------- */
 await new Promise(r => { if (window.L && document.readyState!=='loading') r(); else window.addEventListener('load', r, {once:true}); });
+const __mapContainer = document.getElementById('map');
+if (__mapContainer && __mapContainer._leaflet_id) {
+  try { __mapContainer._leaflet_id = null; } catch {}
+}
 const map = L.map('map').setView([55.751244,37.618423], 13);
 L.tileLayer('https://cartodb-basemaps-a.global.ssl.fastly.net/dark_nolabels/{z}/{x}/{y}{r}.png',
   { attribution: '©OpenStreetMap ©Carto', subdomains: 'abcd', maxZoom: 19 }).addTo(map);
@@ -1697,6 +1701,7 @@ const exists = (id, el) => { if (!el) console.warn(`[UI] #${id} not found`); ret
   getDocs,
   query,
   where
+} from "./firebaseConfig.js";
 
 /* ---------- Auth UI ---------- */
 const loginBtn        = exists('loginBtn', $id('loginBtn'));
