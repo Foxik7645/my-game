@@ -127,6 +127,7 @@
   <div class="tabs">
     <button id="tabWood" class="active">🪵 Дерево</button>
     <button id="tabStone">🪨 Камень</button>
+@@ -108,1210 +121,95 @@
   </div>
   <div class="row">
     <div>Курс: <span id="m-rate" class="tag">10 🪵 = 50 💰</span></div>
@@ -221,6 +222,7 @@
 </body>
 </html>
 
+
 <!-- Leaflet JS -->
 <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
 
@@ -285,8 +287,8 @@ export {
   where
 };
 
+
 // ===== main.js (inlined, import removed) =====
-;(async () => {
 // main.js — redirect-only auth + safe DOM guards
 
 /* tiny helpers */
@@ -296,7 +298,6 @@ const setOnClick = (el, fn) => { if (el) el.onclick = fn; else console.warn('[UI
 const exists = (id, el) => { if (!el) console.warn(`[UI] #${id} not found`); return el;};
 
 /* ---------- Firebase ---------- */
-import {
   auth,
   db,
   GoogleAuthProvider,
@@ -316,7 +317,7 @@ import {
   getDocs,
   query,
   where
-} from "__INLINE__";
+} from "./firebaseConfig.js";
 
 /* ---------- Auth UI ---------- */
 const loginBtn        = exists('loginBtn', $id('loginBtn'));
@@ -685,7 +686,7 @@ function makePopupHtml(b){
     const lvl = HOUSEEAT_LEVELS[b.level] || HOUSEEAT_LEVELS[1];
     const endsAt = b.cookActive ? (b.cookStartMs + lvl.cookMs) : 0;
     const status = b.cookActive
-      ? `Статус: готовится Осталось: <span data-end="${endsAt}" class="cook-eta">—</span>`
+      ? `Статус: готовится… Осталось: <span data-end="${endsAt}" class="cook-eta">—</span>`
       : 'Статус: свободна';
     const btn = (!b.cookActive && canEdit)
       ? `<button onclick="window.cookFood('${b.id}')">Приготовить 10 🍔 (−5 🌽, −50 💰)</button>`
@@ -1638,7 +1639,6 @@ onAuthStateChanged(auth, async user => {
 }, error => {
   showToast('Ошибка аутентификации: ' + error.message, [], 2500);
 });
-})();
 </script>
 </body>
 </html>
