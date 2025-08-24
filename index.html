@@ -6,6 +6,16 @@
 <title>Map Game — Firebase multiplayer</title>
 <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"/>
 <link href="https://fonts.googleapis.com/css2?family=Press+Start+2P&family=VT323&display=swap" rel="stylesheet">
+</head>
+<body>
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+<title>Map Game — Firebase multiplayer</title>
+<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"/>
+<link href="https://fonts.googleapis.com/css2?family=Press+Start+2P&family=VT323&display=swap" rel="stylesheet">
 <style>
   :root{ --cream:#F5E6C8; --accent:#ffd56a; --bar:#66e089; }
   html, body {height:100%; margin:0; background:#1e1e1e; color:#eee; font-family:'Segoe UI',sans-serif;}
@@ -117,7 +127,6 @@
   <div class="tabs">
     <button id="tabWood" class="active">🪵 Дерево</button>
     <button id="tabStone">🪨 Камень</button>
-@@ -108,1210 +121,95 @@
   </div>
   <div class="row">
     <div>Курс: <span id="m-rate" class="tag">10 🪵 = 50 💰</span></div>
@@ -208,7 +217,17 @@
 <div id="toasts"></div>
 
 <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js" defer></script>
+<script type="module" src="main.js"></script>
+</body>
+</html>
+
+<!-- Leaflet JS -->
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+
+<!-- Combined Firebase + Game code -->
 <script type="module">
+// ===== firebaseConfig.js (inlined) =====
+// firebaseConfig.js
 import { initializeApp } from "https://www.gstatic.com/firebasejs/11.0.1/firebase-app.js";
 import {
   getAuth,
@@ -240,8 +259,34 @@ const app = initializeApp(firebaseConfig);
 const auth = getAuth(app);
 // Persist session on this origin (works well with popup or redirect)
 await setPersistence(auth, browserLocalPersistence);
+
 const db = getFirestore(app);
 
+export {
+  auth,
+  db,
+  GoogleAuthProvider,
+  onAuthStateChanged,
+  signOut,
+  signInWithRedirect,
+  getRedirectResult,
+  signInWithPopup,
+  collection,
+  addDoc,
+  onSnapshot,
+  doc,
+  setDoc,
+  getDoc,
+  updateDoc,
+  deleteDoc,
+  serverTimestamp,
+  getDocs,
+  query,
+  where
+};
+
+// ===== main.js (inlined, import removed) =====
+;(async () => {
 // main.js — redirect-only auth + safe DOM guards
 
 /* tiny helpers */
@@ -251,6 +296,28 @@ const setOnClick = (el, fn) => { if (el) el.onclick = fn; else console.warn('[UI
 const exists = (id, el) => { if (!el) console.warn(`[UI] #${id} not found`); return el;};
 
 /* ---------- Firebase ---------- */
+import {
+  auth,
+  db,
+  GoogleAuthProvider,
+  onAuthStateChanged,
+  signOut,
+  signInWithRedirect,
+  getRedirectResult,
+  collection,
+  addDoc,
+  onSnapshot,
+  doc,
+  setDoc,
+  getDoc,
+  updateDoc,
+  deleteDoc,
+  serverTimestamp,
+  getDocs,
+  query,
+  where
+} from "__INLINE__";
+
 /* ---------- Auth UI ---------- */
 const loginBtn        = exists('loginBtn', $id('loginBtn'));
 const logoutBtn       = exists('logoutBtn', $id('logoutBtn'));
@@ -434,10 +501,8 @@ let attackTargetOwner = null;
 setOnClick(attackBtn, () => {
   const targets = [...buildingData.values()].filter(b=>b.type==='base' && b.owner!==uid);
   if(targets.length===0){ showToast('Нет целей для атаки',[],1500); return; }
-  const options = targets.map(b=>b.owner).join('
-');
-  const pick = prompt('Введите ID игрока:
-'+options);
+  const options = targets.map(b=>b.owner).join('\n');
+  const pick = prompt('Введите ID игрока:\n'+options);
   const tgt = targets.find(b=>b.owner===pick);
   if(tgt){ attackTargetOwner = tgt.owner; showToast('Цель выбрана!',[],1200); }
   else showToast('Игрок не найден',[],1500);
@@ -620,7 +685,7 @@ function makePopupHtml(b){
     const lvl = HOUSEEAT_LEVELS[b.level] || HOUSEEAT_LEVELS[1];
     const endsAt = b.cookActive ? (b.cookStartMs + lvl.cookMs) : 0;
     const status = b.cookActive
-      ? `Статус: готовится… Осталось: <span data-end="${endsAt}" class="cook-eta">—</span>`
+      ? `Статус: готовится Осталось: <span data-end="${endsAt}" class="cook-eta">—</span>`
       : 'Статус: свободна';
     const btn = (!b.cookActive && canEdit)
       ? `<button onclick="window.cookFood('${b.id}')">Приготовить 10 🍔 (−5 🌽, −50 💰)</button>`
@@ -1573,8 +1638,7 @@ onAuthStateChanged(auth, async user => {
 }, error => {
   showToast('Ошибка аутентификации: ' + error.message, [], 2500);
 });
-
+})();
 </script>
-
 </body>
 </html>
