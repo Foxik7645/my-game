@@ -3,15 +3,14 @@
 <head>
   <meta charset="UTF-8"/>
   <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
-  <title>Map Game — UI Test Build</title>
+  <title>Map Game — UI Test (full width HUD)</title>
 
-  <!-- Fonts & Leaflet -->
   <link href="https://fonts.googleapis.com/css2?family=Press+Start+2P&family=VT323&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"/>
 
   <style>
     :root{
-      --cream:#F5E6C8; --accent:#ffd56a;
+      --accent:#ffd56a;
       --xp-filled-top:#d07be0; --xp-filled-bottom:#763d84;
       --xp-empty-top:#5d2f68;  --xp-empty-bottom:#412249;
     }
@@ -22,88 +21,87 @@
     #map{position:relative; height:100vh; width:100vw; overflow:hidden;}
 
     /* Тосты */
-    #toasts{position:fixed; right:12px; bottom:12px; display:flex; flex-direction:column; gap:8px; z-index:3500;}
+    #toasts{position:fixed; right:12px; bottom:12px; display:flex; flex-direction:column; gap:8px; z-index:4000;}
     .toast{background:#2d2b2d; border:1px solid #444; border-radius:10px; padding:10px 12px; box-shadow:0 8px 24px rgba(0,0,0,.35); min-width:280px;}
 
-    /* ====== Новый нижний HUD ====== */
-    #bottomHud{
-      position:fixed; left:50%; bottom:18px; transform:translateX(-50%);
-      display:flex; align-items:center; gap:16px; z-index:3000;
-      pointer-events:none; /* карта кликается, у кнопок включаем отдельно */
+    /* ================== НИЖНИЙ HUD ================== */
+    #hudRoot{
+      position:fixed; left:50%; bottom:12px; transform:translateX(-50%);
+      width:96vw; max-width:1700px; pointer-events:none; z-index:3000;
     }
 
-    /* левая деревянная панель */
-    .hud-left .botton-hud{
-      width:460px; height:88px;
-      background:url('./images/FinalUi/Botton_Hud.png') left center/contain no-repeat;
-      image-rendering:pixelated;
+    /* Фоновая длинная деревянная планка HUD (почти на весь экран). Лежит НИЖЕ кнопок. */
+    #hudBar{
+      position:relative; height:128px; width:100%;
+      background:url('./images/FinalUi/HUD.png') center/cover no-repeat; /* растягиваем как фон */
+      image-rendering:pixelated; filter:drop-shadow(0 6px 0 rgba(0,0,0,.35));
+      z-index:1; /* ниже контролов */
     }
-
-    /* центральный HUD-бар — увеличенный */
-    .hud-center{
-      position:relative; width:960px; height:128px;
-      background:url('./images/FinalUi/HUD.png') center/contain no-repeat;
-      image-rendering:pixelated;
-    }
-    /* «корыто» для XP — подгони при желании left/right/top/height */
-    .hud-center .xp-track{
-      position:absolute; left:140px; right:140px; top:34px; height:32px;
-      overflow:hidden; pointer-events:none; border-radius:2px;
+    /* Трек фиолетовой полосы внутри бара (подгони циферки под свой файл) */
+    #xpTrack{
+      position:absolute; left:10%; right:10%; top:32px; height:32px;
       background:linear-gradient(to bottom,var(--xp-empty-top),var(--xp-empty-bottom));
+      overflow:hidden; border-radius:2px;
     }
-    .hud-center .xp-fill{
+    #xpFill{
       height:100%; width:0%;
       background:linear-gradient(to bottom,var(--xp-filled-top),var(--xp-filled-bottom));
       transition:width .25s ease;
     }
-    /* опциональный большой кристалл поверх HUD (если есть файл images/FinalUi/Crystal.png) */
-    .hud-center .hud-crystal{
-      position:absolute; left:50%; top:16px; transform:translateX(-50%);
-      width:46px; height:78px; /* подгони под свой спрайт */
+    /* Опциональный большой кристалл поверх бара, но всё ещё ниже кнопок */
+    #crystal{
+      position:absolute; left:50%; top:12px; transform:translateX(-50%);
+      width:52px; height:84px;
       background:url('./images/FinalUi/Crystal.png') center/contain no-repeat;
       image-rendering:pixelated; pointer-events:none;
     }
 
-    /* правая панель — выровненные кнопки */
-    .hud-right{ display:flex; align-items:center; gap:14px; }
-    .hud-btn{
-      width:180px; height:72px; /* единый размер для всех */
-      border:none; background:transparent;
-      background-size:contain; background-repeat:no-repeat; background-position:center;
-      display:flex; align-items:center; justify-content:center; gap:8px;
-      padding:0 18px; cursor:pointer; filter:drop-shadow(0 2px 0 rgba(0,0,0,.6));
-      pointer-events:auto; image-rendering:pixelated;
+    /* Слой кнопок и панелей поверх бара */
+    #hudControls{
+      position:absolute; inset:0; display:flex; align-items:center; justify-content:space-between;
+      padding:0 18px; z-index:2; pointer-events:none; /* включим на кнопках */
     }
-    .hud-btn:active{ transform:translateY(1px); }
 
-    #moneyBtn{ background-image:url('./images/FinalUi/Icon_Dollar.png'); }
+    /* Левая деревянная плашка «Ресурсы» (если нужна как декор) */
+    .leftPlate{
+      width:420px; height:88px; pointer-events:none;
+      background:url('./images/FinalUi/Botton_Hud.png') left center/contain no-repeat;
+      image-rendering:pixelated;
+    }
+
+    /* ===== Универсальная ПЛАСТИНА кнопки (единый размер для всех) ===== */
+    .btn-plate{
+      width:220px; height:82px; /* <-- все кнопки теперь СТРОГО одинаковые */
+      background:url('./images/FinalUi/Hud_Botton1.png') center/contain no-repeat;
+      image-rendering:pixelated; position:relative; display:flex; align-items:center; justify-content:center;
+      filter:drop-shadow(0 3px 0 rgba(0,0,0,.45));
+      pointer-events:auto; cursor:pointer; user-select:none;
+    }
+    .btn-plate:active{ transform:translateY(1px); }
+
+    /* Иконка поверх пластины (стрелка/шестерёнка) */
+    .btn-icon{
+      width:44px; height:44px; background-size:contain; background-repeat:no-repeat; background-position:center;
+      image-rendering:pixelated;
+    }
+    #btnUpgrade .btn-icon{ background-image:url('./images/FinalUi/Icon_Arrow.png'); }
+    #btnSettings .btn-icon{ background-image:url('./images/FinalUi/Setting.png'); }
+
+    /* Кнопка денег: та же пластина + доллар + текст */
+    #btnMoney{ display:flex; gap:10px; padding:0 12px; }
+    #btnMoney .dollar{
+      width:36px; height:36px; background:url('./images/FinalUi/Icon_Dollar.png') center/contain no-repeat; image-rendering:pixelated;
+    }
     #moneyText{
-      color:#ffd56a; font-size:18px; line-height:1; user-select:none;
-      text-shadow:0 1px 0 #000, 0 1px 6px rgba(0,0,0,.35);
+      color:var(--accent); font-size:18px; line-height:1; text-shadow:0 1px 0 #000, 0 1px 6px rgba(0,0,0,.35);
     }
-    #upgradeBtn{ background-image:url('./images/FinalUi/Icon_Arrow.png'); }
-    #settingsBtn{ background-image:url('./images/FinalUi/Setting.png'); }
 
-    /* Магазин (демо для клика) */
-    #shopPanel{
-      position:fixed; top:88px; left:0; bottom:0; width:330px; background:#222;
-      border-right:1px solid #3a3a3a; z-index:3150; display:none; overflow-y:auto; padding:12px; box-shadow:8px 0 20px rgba(0,0,0,.35);
-    }
-    #shopHeader{display:flex; align-items:center; justify-content:space-between; margin-bottom:10px;}
-    #shopClose{cursor:pointer; background:#444; color:#eee; border:none; padding:6px 10px; border-radius:8px;}
-    .card{position:relative; width:300px; height:438px; margin:10px auto; image-rendering:pixelated; border-radius:12px; box-shadow:0 10px 18px rgba(0,0,0,.35); cursor:pointer; overflow:hidden; background:#2b2b2b;}
-    .card .title{position:absolute; top:18px; left:16px; right:16px; font-size:13px; color:var(--cream);}
-    .card .desc{position:absolute; left:16px; right:16px; bottom:22px; font-size:12px; line-height:1.25; color:var(--cream);}
-    .buybar{position:absolute; top:0; left:0; right:0; height:60px; z-index:3; background:linear-gradient(#2b2b2b,#1e1e1e); border-bottom:1px solid #555; display:flex; align-items:center; justify-content:center; gap:10px;}
-    .price{color:var(--accent); font-size:12px;}
+    /* Центр: можем добавить набор маленьких кнопок на самой планке (позже) */
+    .centerSpacer{ flex:1; }
 
-    /* адаптив */
-    @media (max-width: 1480px){
-      #bottomHud{ transform:translateX(-50%) scale(.95); transform-origin:bottom center; }
-    }
-    @media (max-width: 1280px){
-      #bottomHud{ transform:translateX(-50%) scale(.85); }
-    }
+    /* Адаптив */
+    @media (max-width: 1480px){ #hudRoot{ transform:translateX(-50%) scale(.95); transform-origin:bottom center; } }
+    @media (max-width: 1280px){ #hudRoot{ transform:translateX(-50%) scale(.88); } }
   </style>
 </head>
 <body>
@@ -111,130 +109,102 @@
   <!-- Карта -->
   <div id="map"></div>
 
-  <!-- Новый нижний HUD -->
-  <div id="bottomHud" class="pixel">
-    <div class="hud-left">
-      <div class="botton-hud" aria-hidden="true"></div>
+  <!-- НИЖНИЙ HUD -->
+  <div id="hudRoot" class="pixel">
+    <!-- Фон-бар (задний слой) -->
+    <div id="hudBar">
+      <div id="xpTrack"><div id="xpFill"></div></div>
+      <!-- Появится, если файл Crystal.png есть -->
+      <div id="crystal" aria-hidden="true"></div>
     </div>
 
-    <div class="hud-center">
-      <div class="xp-track"><div id="xpFill" class="xp-fill"></div></div>
-      <!-- Опциональный большой кристалл (если есть файл) -->
-      <div class="hud-crystal" aria-hidden="true"></div>
-    </div>
+    <!-- Контролы поверх бара -->
+    <div id="hudControls">
+      <div class="leftPlate" aria-hidden="true"></div>
 
-    <div class="hud-right">
-      <button id="moneyBtn" class="hud-btn" type="button" title="Баланс">
-        <span id="moneyText">$0</span>
-      </button>
-      <button id="upgradeBtn" class="hud-btn" type="button" title="Магазин/Постройка"></button>
-      <button id="settingsBtn" class="hud-btn" type="button" title="Настройки"></button>
+      <div class="centerSpacer"></div>
+
+      <div style="display:flex; gap:14px;">
+        <div id="btnMoney" class="btn-plate">
+          <div class="dollar" aria-hidden="true"></div>
+          <span id="moneyText">$0</span>
+        </div>
+
+        <div id="btnUpgrade" class="btn-plate" title="Магазин/Постройка">
+          <div class="btn-icon" aria-hidden="true"></div>
+        </div>
+
+        <div id="btnSettings" class="btn-plate" title="Настройки">
+          <div class="btn-icon" aria-hidden="true"></div>
+        </div>
+      </div>
     </div>
   </div>
 
-  <!-- Магазин (демо) -->
-  <aside id="shopPanel" class="pixel">
-    <div id="shopHeader">
+  <!-- Простой магазин (для проверки клика) -->
+  <aside id="shopPanel" class="pixel" style="position:fixed; top:88px; left:0; bottom:0; width:330px; background:#222; border-right:1px solid #3a3a3a; z-index:3500; display:none; overflow-y:auto; padding:12px; box-shadow:8px 0 20px rgba(0,0,0,.35);">
+    <div style="display:flex; align-items:center; justify-content:space-between; margin-bottom:10px;">
       <h3>Магазин</h3>
-      <button id="shopClose">×</button>
+      <button id="shopClose" style="cursor:pointer; background:#444; color:#eee; border:none; padding:6px 10px; border-radius:8px;">×</button>
     </div>
-    <div class="card">
-      <div class="buybar">
-        <span class="price">100 💰</span>
+    <div class="card" style="position:relative; width:300px; height:438px; margin:10px auto; image-rendering:pixelated; border-radius:12px; box-shadow:0 10px 18px rgba(0,0,0,.35); cursor:pointer; overflow:hidden; background:#2b2b2b;">
+      <div class="buybar" style="position:absolute; top:0; left:0; right:0; height:60px; z-index:3; background:linear-gradient(#2b2b2b,#1e1e1e); border-bottom:1px solid #555; display:flex; align-items:center; justify-content:center; gap:10px;">
+        <span class="price" style="color:#ffd56a;">100 💰</span>
         <button class="pixel" style="background:#444;color:#fff;border:none;border-radius:8px;padding:6px 10px;">Купить</button>
       </div>
-      <div class="title">Дом дровосека</div>
-      <div class="desc">Рабочие добывают дерево рядом и носят в дом.</div>
-    </div>
-    <div class="card">
-      <div class="buybar">
-        <span class="price">100 💰</span>
-        <button class="pixel" style="background:#444;color:#fff;border:none;border-radius:8px;padding:6px 10px;">Купить</button>
-      </div>
-      <div class="title">Дом шахтёра</div>
-      <div class="desc">Поблизости появляются камни.</div>
+      <div class="title" style="position:absolute; top:18px; left:16px; right:16px; font-size:13px;">Дом дровосека</div>
+      <div class="desc" style="position:absolute; left:16px; right:16px; bottom:22px; font-size:12px; line-height:1.25;">Рабочие добывают дерево рядом и носят в дом.</div>
     </div>
   </aside>
 
-  <!-- Тосты -->
   <div id="toasts"></div>
 
-  <!-- Leaflet -->
   <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
 
-  <!-- Игра: офлайн тест без Firebase/Auth -->
   <script type="module">
-    /* ===== БАЗОВЫЕ ДАННЫЕ (офлайн для тестов UI) ===== */
-    const resources = { money: 30434, wood: 10, stone: 0, corn: 0, food: 30 };
-    let level = 3, xp = 250;     // не пустые, чтобы было видно прогресс
-    const BASE_XP = 500;
+    /* ===== Оффлайн-демо логика для проверки HUD ===== */
+    const resources = { money: 30434 };
+    let level = 3, xp = 250; const BASE_XP = 500;
     const $ = (id)=>document.getElementById(id);
 
-    /* Тосты */
-    function showToast(text, actions=[], ms=1800){
-      const host = $('toasts'); if(!host) return;
-      const t = document.createElement('div'); t.className='toast pixel'; t.textContent=text;
-      host.appendChild(t);
-      setTimeout(()=>{ t.remove(); }, ms);
+    function showToast(text, _, ms=1600){
+      const host = $('toasts'); const t = document.createElement('div');
+      t.className='toast pixel'; t.textContent=text; host.appendChild(t);
+      setTimeout(()=>t.remove(), ms);
     }
 
-    /* ===== Карта ===== */
+    // Карта
     await new Promise(r => (document.readyState!=='loading')?r():window.addEventListener('DOMContentLoaded', r, {once:true}));
     const map = L.map('map', { zoomControl:false }).setView([55.751244, 37.618423], 13);
     L.tileLayer('https://cartodb-basemaps-a.global.ssl.fastly.net/dark_nolabels/{z}/{x}/{y}{r}.png',
       { attribution: '©OpenStreetMap ©Carto', subdomains: 'abcd', maxZoom: 19 }).addTo(map);
 
-    /* ===== XP ===== */
-    function getRequiredXp(lvl){ return BASE_XP * lvl; }
-    function updateXpHUD(){
-      const required = getRequiredXp(level);
-      const p = Math.max(0, Math.min(1, xp / required));
-      const fill = $('xpFill'); if(fill) fill.style.width = (p*100).toFixed(2)+'%';
+    // XP
+    const req = lvl => BASE_XP * lvl;
+    function renderXP(){
+      const p = Math.max(0, Math.min(1, xp / req(level)));
+      $('xpFill').style.width = (p*100).toFixed(2)+'%';
     }
-    function addXP(amount){
-      xp += amount;
-      let required = getRequiredXp(level);
-      while (xp >= required){
-        xp -= required; level++; required = getRequiredXp(level);
-        showToast(`📈 Уровень ${level}!`,[],1500);
-      }
-      updateXpHUD();
+    function addXP(a){
+      xp += a;
+      while (xp >= req(level)){ xp -= req(level); level++; showToast(`📈 Уровень ${level}!`); }
+      renderXP();
     }
 
-    /* ===== Деньги ===== */
-    function updateMoneyHUD(){
-      const el = $('moneyText');
-      if(el) el.textContent = '$' + (resources.money ?? 0).toLocaleString('ru-RU');
+    // Деньги
+    function renderMoney(){
+      $('moneyText').textContent = '$' + (resources.money ?? 0).toLocaleString('ru-RU');
     }
 
-    /* Первичная отрисовка HUD */
-    updateMoneyHUD(); updateXpHUD();
+    renderMoney(); renderXP();
 
-    /* ===== Кнопки HUD ===== */
-    const upgradeBtn = $('upgradeBtn');
-    const settingsBtn = $('settingsBtn');
-    const shopPanel = $('shopPanel');
-    const shopClose = $('shopClose');
+    // Кнопки
+    $('btnUpgrade').onclick = () => { const p = document.getElementById('shopPanel'); p.style.display = (p.style.display==='block')?'none':'block'; };
+    document.getElementById('shopClose').onclick = () => document.getElementById('shopPanel').style.display='none';
+    $('btnSettings').onclick = () => showToast('Настройки пока в разработке 🔧');
 
-    if (upgradeBtn){
-      upgradeBtn.addEventListener('click', ()=>{
-        shopPanel.style.display = (shopPanel.style.display==='block') ? 'none' : 'block';
-      });
-    }
-    if (shopClose){
-      shopClose.addEventListener('click', ()=>{ shopPanel.style.display='none'; });
-    }
-    if (settingsBtn){
-      settingsBtn.addEventListener('click', ()=>{
-        showToast('Настройки пока в разработке 🔧');
-      });
-    }
-
-    /* ===== Демка прогресса: каждые 2 сек +20 XP и +5 денег ===== */
-    setInterval(()=>{
-      resources.money += 5; updateMoneyHUD();
-      addXP(20);
-    }, 2000);
+    // Демонстрация: постепенно растёт XP и деньги
+    setInterval(()=>{ resources.money+=7; renderMoney(); addXP(22); }, 2000);
   </script>
 </body>
 </html>
